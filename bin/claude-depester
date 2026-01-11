@@ -5,7 +5,7 @@
  * Remove silly thinking words from Claude Code
  */
 
-const { findCliJs, getSearchedPaths } = require('../lib/detector');
+const { findCliJs, findAllClaudeCode, getSearchedPaths } = require('../lib/detector');
 const { patch, checkStatus, restoreBackup } = require('../lib/patcher');
 const { installHook, removeHook, getHookStatus } = require('../lib/hooks');
 
@@ -23,7 +23,9 @@ const flags = {
   removeHook: args.includes('--remove-hook'),
   hookStatus: args.includes('--hook-status'),
   silent: args.includes('--silent') || args.includes('-s'),
-  verbose: args.includes('--verbose')
+  verbose: args.includes('--verbose'),
+  all: args.includes('--all') || args.includes('-a'),
+  list: args.includes('--list') || args.includes('-l')
 };
 
 function log(...msg) {
@@ -48,6 +50,8 @@ USAGE:
 
 OPTIONS:
   (no options)      Patch Claude Code now
+  -a, --all         Patch ALL installations (CLI + VS Code extensions)
+  -l, --list        List all found installations
   -c, --check       Check if Claude Code is patched
   -r, --restore     Restore original file from backup
   -n, --dry-run     Preview changes without applying
@@ -62,7 +66,9 @@ OPTIONS:
   -h, --help        Show this help
 
 EXAMPLES:
-  npx claude-depester                 # Patch now
+  npx claude-depester                 # Patch first found installation
+  npx claude-depester --all           # Patch ALL installations
+  npx claude-depester --list          # List all installations
   npx claude-depester --check         # Check status
   npx claude-depester --install-hook  # Auto-patch after updates
   npx claude-depester --restore       # Undo patch
@@ -116,7 +122,85 @@ async function main() {
     process.exit(result.success ? 0 : 1);
   }
   
-  // Find Claude Code installation
+  // Handle --list
+  if (flags.list) {
+    const installations = findAllClaudeCode();
+    if (installations.length === 0) {
+      error('No Claude Code installations found.');
+      if (flags.verbose) {
+        showSearchedPaths();
+      }
+      process.exit(1);
+    }
+    
+    log(`Found ${installations.length} installation(s):\n`);
+    for (const inst of installations) {
+      const status = checkStatus(inst.path);
+      const statusStr = status.patched ? '[PATCHED]' : '[NOT PATCHED]';
+      log(`${statusStr} ${inst.method}`);
+      log(`  ${inst.path}\n`);
+    }
+    process.exit(0);
+  }
+  
+  // Handle --all (patch all installations)
+  if (flags.all) {
+    const installations = findAllClaudeCode();
+    if (installations.length === 0) {
+      error('No Claude Code installations found.');
+      if (flags.verbose) {
+        showSearchedPaths();
+      }
+      process.exit(1);
+    }
+    
+    log(`Found ${installations.length} installation(s):\n`);
+    
+    let successCount = 0;
+    let skipCount = 0;
+    let failCount = 0;
+    
+    for (const inst of installations) {
+      log(`${inst.method}:`);
+      log(`  ${inst.path}`);
+      
+      if (flags.restore) {
+        const success = restoreBackup(inst.path);
+        if (success) {
+          log('  -> Restored from backup\n');
+          successCount++;
+        } else {
+          log('  -> No backup found\n');
+          skipCount++;
+        }
+      } else {
+        const result = patch(inst.path, { dryRun: flags.dryRun });
+        if (result.success) {
+          if (result.alreadyPatched) {
+            log('  -> Already patched\n');
+            skipCount++;
+          } else if (result.dryRun) {
+            log('  -> Would patch\n');
+            successCount++;
+          } else {
+            log('  -> Patched!\n');
+            successCount++;
+          }
+        } else {
+          log(`  -> Failed: ${result.message}\n`);
+          failCount++;
+        }
+      }
+    }
+    
+    log(`Done: ${successCount} patched, ${skipCount} skipped, ${failCount} failed`);
+    if (!flags.dryRun && successCount > 0) {
+      log('Restart Claude Code for changes to take effect.');
+    }
+    process.exit(failCount > 0 ? 1 : 0);
+  }
+  
+  // Find Claude Code installation (single)
   const cliInfo = findCliJs();
   
   if (!cliInfo) {

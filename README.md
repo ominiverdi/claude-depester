@@ -53,6 +53,8 @@ That's it! Restart Claude Code for changes to take effect.
 | Command | Description |
 |---------|-------------|
 | `npx claude-depester` | Patch Claude Code |
+| `npx claude-depester --all` | Patch ALL installations (CLI + VS Code) |
+| `npx claude-depester --list` | List all found installations |
 | `npx claude-depester --dry-run` | Preview changes (no modifications) |
 | `npx claude-depester --check` | Check patch status |
 | `npx claude-depester --restore` | Restore original from backup |
@@ -66,12 +68,14 @@ That's it! Restart Claude Code for changes to take effect.
 
 | Method | Path | Status |
 |--------|------|--------|
-| Native binary | `~/.local/bin/claude` -> `~/.local/share/claude/versions/X.Y.Z` | Fully supported |
+| Native binary | `~/.local/share/claude/versions/X.Y.Z` | Fully supported |
+| VS Code extension | `~/.vscode/extensions/anthropic.claude-code-*/` | Fully supported |
+| VSCodium extension | `~/.vscode-oss/extensions/anthropic.claude-code-*/` | Fully supported |
 | Local npm | `~/.claude/local/node_modules/@anthropic-ai/claude-code/` | Fully supported |
 | Global npm | `npm root -g`/@anthropic-ai/claude-code/ | Fully supported |
 | Homebrew | `/opt/homebrew/Caskroom/claude-code/` | Fully supported |
 
-The tool auto-detects your installation.
+The tool auto-detects your installation. Use `--list` to see all found installations, and `--all` to patch them all at once.
 
 ## After Claude Code Updates
 
