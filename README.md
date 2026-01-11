@@ -116,11 +116,34 @@ Every time Claude Code starts, it checks and re-applies the patch if needed.
 
 ## Troubleshooting
 
+### Still seeing silly words after patching?
+
+**You must fully restart Claude Code / VS Code / VSCodium** after patching. The patch modifies the binary on disk, but running processes still use the old code in memory.
+
+For VS Code / VSCodium:
+1. Close the editor completely (check it's not running in background)
+2. Kill any remaining processes: `pkill -f codium` or `pkill -f "Code"`
+3. Reopen the editor
+
+To verify processes are stopped:
+```bash
+ps aux | grep -E "(vscode|codium|claude)" | grep -v grep
+```
+
 ### "Could not find Claude Code installation"
 
 Make sure Claude Code is installed:
 - Check with `claude --version`
 - Run with `--verbose` to see searched paths
+- Use `--list` to see all detected installations
+
+### VS Code extension not detected
+
+The VS Code extension bundles its own native binary, separate from the CLI. Use:
+```bash
+npx claude-depester --list    # See all installations
+npx claude-depester --all     # Patch ALL installations
+```
 
 ### Patch not working after update
 
@@ -132,8 +155,8 @@ If the patch fails:
 ### Want to undo everything
 
 ```bash
-npx claude-depester --restore      # Restore original file
-npx claude-depester --remove-hook  # Remove auto-patch hook
+npx claude-depester --restore --all  # Restore all installations
+npx claude-depester --remove-hook    # Remove auto-patch hook
 ```
 
 ## Technical Details
