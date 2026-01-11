@@ -1,8 +1,11 @@
 # claude-depester
 
+[![npm version](https://img.shields.io/npm/v/claude-depester.svg)](https://www.npmjs.com/package/claude-depester)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Remove silly thinking words from Claude Code.
 
-Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see "Thinking".
+Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
 > **Last updated:** 2026-01-11 | **Tested with:** Claude Code 2.1.4
 
@@ -35,51 +38,42 @@ npx claude-depester --install-hook
 
 That's it! Restart Claude Code for changes to take effect.
 
-## How It Works
+## Features
 
-1. **Detects** your Claude Code installation (native binary, npm, homebrew)
-2. **Finds** the silly words array by content (not variable names - those change every version)
-3. **Creates backup** before patching (can restore anytime)
-4. **Patches** the file with proper padding to maintain binary integrity
-5. **SessionStart hook** re-applies patch automatically after updates
-
-### Detection Strategy
-
-The tool finds the array by looking for its unique content:
-- Starts with `"Accomplishing"`
-- Ends with `"Zigzagging"`
-- Contains distinctive words like `"Flibbertigibbeting"`, `"Discombobulating"`
-
-This works regardless of minified variable names (which change every version).
+- Works with native binaries (Bun-compiled) and npm installations
+- Auto-detects your Claude Code installation
+- Creates backup before patching (can restore anytime)
+- Optional SessionStart hook for auto-patching after updates
+- Content-based detection survives version updates
 
 ## Commands
 
-```bash
-npx claude-depester              # Patch now
-npx claude-depester --dry-run    # Preview changes (safe, no modifications)
-npx claude-depester --check      # Check if patched
-npx claude-depester --restore    # Restore original
-npx claude-depester --verbose    # Show detailed info
+| Command | Description |
+|---------|-------------|
+| `npx claude-depester` | Patch Claude Code |
+| `npx claude-depester --dry-run` | Preview changes (no modifications) |
+| `npx claude-depester --check` | Check patch status |
+| `npx claude-depester --restore` | Restore original from backup |
+| `npx claude-depester --verbose` | Show detailed info |
+| `npx claude-depester --install-hook` | Auto-patch after updates |
+| `npx claude-depester --remove-hook` | Remove auto-patch hook |
+| `npx claude-depester --hook-status` | Check hook status |
+| `npx claude-depester --help` | Show help |
 
-npx claude-depester --install-hook   # Auto-patch after updates
-npx claude-depester --remove-hook    # Remove auto-patch hook
-npx claude-depester --hook-status    # Check hook status
+## Supported Installation Methods
 
-npx claude-depester --help       # Show help
-```
-
-## Installation Methods Supported
-
-- **Native binary** (`~/.local/bin/claude` -> `~/.local/share/claude/versions/X.Y.Z`) - Recommended by Anthropic
-- **Local npm** (`~/.claude/local/...`)
-- **Global npm** (`npm install -g @anthropic-ai/claude-code`)
-- **Homebrew** (`brew install --cask claude-code`)
+| Method | Path | Status |
+|--------|------|--------|
+| Native binary | `~/.local/bin/claude` -> `~/.local/share/claude/versions/X.Y.Z` | Fully supported |
+| Local npm | `~/.claude/local/node_modules/@anthropic-ai/claude-code/` | Fully supported |
+| Global npm | `npm root -g`/@anthropic-ai/claude-code/ | Fully supported |
+| Homebrew | `/opt/homebrew/Caskroom/claude-code/` | Fully supported |
 
 The tool auto-detects your installation.
 
 ## After Claude Code Updates
 
-If you have the hook installed (`--install-hook`), patching happens automatically on startup.
+With the hook installed (`--install-hook`), patching happens automatically on startup.
 
 Otherwise, just run `npx claude-depester` again after updating.
 
@@ -103,8 +97,7 @@ The `--install-hook` command adds a SessionStart hook to `~/.claude/settings.jso
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-depester --silent",
-            "timeout": 30
+            "command": "npx claude-depester --silent"
           }
         ]
       }
@@ -139,31 +132,48 @@ npx claude-depester --remove-hook  # Remove auto-patch hook
 
 ## Technical Details
 
-- **Native binaries**: Claude Code native is a Bun-compiled executable. We use [node-lief](https://www.npmjs.com/package/node-lief) to properly extract the embedded JavaScript, patch it, and repack the binary - the same approach used by [tweakcc](https://github.com/Piebald-AI/tweakcc).
-- **Plain JS installs**: For npm installations, we patch the JavaScript file directly.
-- **Backup location**: `<original-file>.depester.backup`
-- **Hook timeout**: 30 seconds (configurable in settings.json)
+### How it works
+
+1. **Detection**: Finds the silly words array by unique content markers (e.g., "Flibbertigibbeting", "Discombobulating") rather than variable names (which change every version due to minification)
+
+2. **Extraction**: For native binaries (Bun-compiled), uses [node-lief](https://www.npmjs.com/package/node-lief) to properly extract the embedded JavaScript - the same approach used by [tweakcc](https://github.com/Piebald-AI/tweakcc)
+
+3. **Patching**: Replaces the array `["Accomplishing",...,"Zigzagging"]` with `["Thinking"]`
+
+4. **Repacking**: Rebuilds the binary with the modified JavaScript
+
+### File locations
+
+- **Backup**: `<original-file>.depester.backup`
+- **Hook config**: `~/.claude/settings.json`
+
+## Requirements
+
+- Node.js >= 18.0.0
+- Claude Code installed
 
 ## Contributing
 
 If Claude Code updates and the patch stops working:
 
-1. Check if the array still starts with `"Accomplishing"` and ends with `"Zigzagging"`
+1. Check if the array still contains marker words like `"Flibbertigibbeting"`
 2. Update `lib/patcher.js` if the pattern changed
 3. Submit a PR
 
-## See Also
+Issues and PRs welcome!
 
-- [tweakcc](https://github.com/Piebald-AI/tweakcc) - Full Claude Code customization tool (themes, prompts, more)
-- [aleks-apostle/claude-code-patches](https://github.com/aleks-apostle/claude-code-thinking-patch) - Thinking visibility patch
+## Related Projects
 
-## Credits
+- [tweakcc](https://github.com/Piebald-AI/tweakcc) - Full Claude Code customization (themes, prompts, and more)
+- [claude-code-thinking-patch](https://github.com/aleks-apostle/claude-code-thinking-patch) - Thinking visibility patch
 
-Inspired by:
-- [vemv's gist](https://gist.github.com/vemv/c6333d53ede16198a23eb95425051b7b)
-- [aleks-apostle/claude-code-patches](https://github.com/aleks-apostle/claude-code-thinking-patch)
-- [heromantf's bun extractor](https://gist.github.com/heromantf/7db88edcb7b1c0c35067244584a01afc)
+## Acknowledgments
+
+This project builds upon work by:
+- [tweakcc](https://github.com/Piebald-AI/tweakcc) - For the proper Bun binary extraction/repacking approach
+- [vemv's gist](https://gist.github.com/vemv/c6333d53ede16198a23eb95425051b7b) - Original simple patch idea
+- [heromantf's bun extractor](https://gist.github.com/heromantf/7db88edcb7b1c0c35067244584a01afc) - Bun binary structure documentation
 
 ## License
 
-MIT
+MIT - see [LICENSE](LICENSE)
