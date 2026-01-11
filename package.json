@@ -1,6 +1,6 @@
 {
   "name": "claude-depester",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Remove silly thinking words from Claude Code. Auto-patches and survives updates via SessionStart hook.",
   "main": "lib/patcher.js",
   "bin": {

@@ -7,7 +7,7 @@ Remove silly thinking words from Claude Code.
 
 Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
-> **Last updated:** 2026-01-11 | **Tested with:** Claude Code 2.1.4
+> **Last updated:** 2026-01-11 | **Tested with:** Claude Code 2.1.4, 2.1.5
 
 ![Thinking... instead of silly words](img/screenshot1.png)
 
@@ -43,10 +43,12 @@ That's it! Restart Claude Code for changes to take effect.
 ## Features
 
 - Works with native binaries (Bun-compiled) and npm installations
+- **Patches VS Code/VSCodium extension webview** (the UI that shows spinner text)
 - Auto-detects your Claude Code installation
 - Creates backup before patching (can restore anytime)
 - Optional SessionStart hook for auto-patching after updates
 - Content-based detection survives version updates
+- Cross-platform: Linux, macOS, Windows (WSL/Git Bash)
 
 ## Commands
 
@@ -66,16 +68,36 @@ That's it! Restart Claude Code for changes to take effect.
 
 ## Supported Installation Methods
 
+### Linux
 | Method | Path | Status |
 |--------|------|--------|
 | Native binary | `~/.local/share/claude/versions/X.Y.Z` | Fully supported |
 | VS Code extension | `~/.vscode/extensions/anthropic.claude-code-*/` | Fully supported |
+| VS Code webview | `~/.vscode/extensions/.../webview/index.js` | Fully supported |
 | VSCodium extension | `~/.vscode-oss/extensions/anthropic.claude-code-*/` | Fully supported |
 | Local npm | `~/.claude/local/node_modules/@anthropic-ai/claude-code/` | Fully supported |
 | Global npm | `npm root -g`/@anthropic-ai/claude-code/ | Fully supported |
-| Homebrew | `/opt/homebrew/Caskroom/claude-code/` | Fully supported |
+
+### macOS
+| Method | Path | Status |
+|--------|------|--------|
+| Native binary | `~/.local/share/claude/versions/X.Y.Z` | Fully supported |
+| Native binary | `~/Library/Application Support/Claude/versions/X.Y.Z` | Fully supported |
+| VS Code extension | `~/.vscode/extensions/anthropic.claude-code-*/` | Fully supported |
+| VS Code webview | `~/.vscode/extensions/.../webview/index.js` | Fully supported |
+| Homebrew | `/opt/homebrew/lib/node_modules/@anthropic-ai/claude-code/` | Fully supported |
+
+### Windows (WSL/Git Bash)
+| Method | Path | Status |
+|--------|------|--------|
+| Native binary | `%USERPROFILE%\.local\bin\claude.exe` | Fully supported |
+| Native binary | `%LOCALAPPDATA%\Claude\versions\X.Y.Z` | Fully supported |
+| VS Code extension | `%USERPROFILE%\.vscode\extensions\anthropic.claude-code-*\` | Fully supported |
+| VS Code webview | `...\extensions\...\webview\index.js` | Fully supported |
 
 The tool auto-detects your installation. Use `--list` to see all found installations, and `--all` to patch them all at once.
+
+> **Important for VS Code users:** The extension has TWO places with spinner words - the native binary AND the webview. Use `--all` to patch both!
 
 ## After Claude Code Updates
 
@@ -137,13 +159,19 @@ Make sure Claude Code is installed:
 - Run with `--verbose` to see searched paths
 - Use `--list` to see all detected installations
 
-### VS Code extension not detected
+### VS Code extension still showing silly words
 
-The VS Code extension bundles its own native binary, separate from the CLI. Use:
+The VS Code extension has **TWO separate components** with spinner words:
+1. **Native binary** (`resources/native-binary/claude`) - the backend
+2. **Webview** (`webview/index.js`) - the frontend UI that renders the spinner
+
+You must patch BOTH for the fix to work. Use:
 ```bash
-npx claude-depester --list    # See all installations
-npx claude-depester --all     # Patch ALL installations
+npx claude-depester --list    # Should show both binary AND webview
+npx claude-depester --all     # Patch ALL components
 ```
+
+Then **fully restart VS Code** (not just reload window).
 
 ### Patch not working after update
 
@@ -180,6 +208,19 @@ npx claude-depester --remove-hook    # Remove auto-patch hook
 
 - Node.js >= 18.0.0
 - Claude Code installed
+
+## Platform Support
+
+| Platform | Binary Patching | Webview Patching | Status |
+|----------|-----------------|------------------|--------|
+| Linux x64 | ELF | Yes | Tested |
+| Linux ARM64 | ELF | Yes | Should work |
+| macOS Intel | MachO | Yes | Should work |
+| macOS Apple Silicon | MachO | Yes | Should work |
+| Windows x64 | PE | Yes | Should work |
+| Windows ARM64 | PE | Yes | Should work |
+
+The tool uses [node-lief](https://www.npmjs.com/package/node-lief) which has prebuilt binaries for all these platforms.
 
 ## Contributing
 

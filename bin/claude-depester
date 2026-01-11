@@ -135,9 +135,10 @@ async function main() {
     
     log(`Found ${installations.length} installation(s):\n`);
     for (const inst of installations) {
-      const status = checkStatus(inst.path);
+      const status = checkStatus(inst.path, { type: inst.type });
       const statusStr = status.patched ? '[PATCHED]' : '[NOT PATCHED]';
-      log(`${statusStr} ${inst.method}`);
+      const typeStr = inst.type === 'webview' ? ' (webview)' : inst.type === 'binary' ? ' (binary)' : '';
+      log(`${statusStr} ${inst.method}${typeStr}`);
       log(`  ${inst.path}\n`);
     }
     process.exit(0);
@@ -174,7 +175,7 @@ async function main() {
           skipCount++;
         }
       } else {
-        const result = patch(inst.path, { dryRun: flags.dryRun });
+        const result = patch(inst.path, { dryRun: flags.dryRun, type: inst.type });
         if (result.success) {
           if (result.alreadyPatched) {
             log('  -> Already patched\n');
@@ -222,7 +223,7 @@ async function main() {
   
   // Handle check
   if (flags.check) {
-    const status = checkStatus(cliInfo.path);
+    const status = checkStatus(cliInfo.path, { type: cliInfo.type });
     
     if (status.error) {
       error(`Error: ${status.error}`);
@@ -264,7 +265,7 @@ async function main() {
   }
   
   // Default action: patch
-  const result = patch(cliInfo.path, { dryRun: flags.dryRun });
+  const result = patch(cliInfo.path, { dryRun: flags.dryRun, type: cliInfo.type });
   
   if (result.success) {
     if (result.alreadyPatched) {
