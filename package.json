@@ -1,0 +1,41 @@
+{
+  "name": "claude-depester",
+  "version": "1.0.0",
+  "description": "Remove silly thinking words from Claude Code. Auto-patches and survives updates via SessionStart hook.",
+  "main": "lib/patcher.js",
+  "bin": {
+    "claude-depester": "./bin/claude-depester"
+  },
+  "scripts": {
+    "test": "node bin/claude-depester --check"
+  },
+  "keywords": [
+    "claude-code",
+    "anthropic",
+    "cli",
+    "patch",
+    "thinking-words"
+  ],
+  "author": "ominiverdi",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ominiverdi/claude-depester.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ominiverdi/claude-depester/issues"
+  },
+  "homepage": "https://github.com/ominiverdi/claude-depester#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "node-lief": "^0.1.8"
+  }
+}

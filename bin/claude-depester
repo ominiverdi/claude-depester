@@ -1,0 +1,215 @@
+#!/usr/bin/env node
+
+/**
+ * claude-depester CLI
+ * Remove silly thinking words from Claude Code
+ */
+
+const { findCliJs, getSearchedPaths } = require('../lib/detector');
+const { patch, checkStatus, restoreBackup } = require('../lib/patcher');
+const { installHook, removeHook, getHookStatus } = require('../lib/hooks');
+
+const VERSION = require('../package.json').version;
+
+// Parse arguments
+const args = process.argv.slice(2);
+const flags = {
+  help: args.includes('--help') || args.includes('-h'),
+  version: args.includes('--version') || args.includes('-v'),
+  check: args.includes('--check') || args.includes('-c'),
+  restore: args.includes('--restore') || args.includes('-r'),
+  dryRun: args.includes('--dry-run') || args.includes('-n'),
+  installHook: args.includes('--install-hook'),
+  removeHook: args.includes('--remove-hook'),
+  hookStatus: args.includes('--hook-status'),
+  silent: args.includes('--silent') || args.includes('-s'),
+  verbose: args.includes('--verbose')
+};
+
+function log(...msg) {
+  if (!flags.silent) {
+    console.log(...msg);
+  }
+}
+
+function error(...msg) {
+  console.error(...msg);
+}
+
+function showHelp() {
+  console.log(`
+claude-depester v${VERSION}
+
+Remove silly thinking words from Claude Code (like "Flibbertigibbeting", 
+"Discombobulating", etc.) and replace them with "Thinking".
+
+USAGE:
+  npx claude-depester [options]
+
+OPTIONS:
+  (no options)      Patch Claude Code now
+  -c, --check       Check if Claude Code is patched
+  -r, --restore     Restore original file from backup
+  -n, --dry-run     Preview changes without applying
+  
+  --install-hook    Add SessionStart hook (auto-patch after updates)
+  --remove-hook     Remove SessionStart hook
+  --hook-status     Check if hook is installed
+  
+  -s, --silent      Suppress output (for hook use)
+  --verbose         Show detailed information
+  -v, --version     Show version
+  -h, --help        Show this help
+
+EXAMPLES:
+  npx claude-depester                 # Patch now
+  npx claude-depester --check         # Check status
+  npx claude-depester --install-hook  # Auto-patch after updates
+  npx claude-depester --restore       # Undo patch
+
+MORE INFO:
+  https://github.com/ominiverdi/claude-depester
+`);
+}
+
+function showVersion() {
+  console.log(`claude-depester v${VERSION}`);
+}
+
+function showSearchedPaths() {
+  error('\nSearched paths:');
+  for (const { method, path } of getSearchedPaths()) {
+    error(`  [${method}]`);
+    error(`    ${path}`);
+  }
+}
+
+async function main() {
+  // Handle help/version first
+  if (flags.help) {
+    showHelp();
+    process.exit(0);
+  }
+  
+  if (flags.version) {
+    showVersion();
+    process.exit(0);
+  }
+  
+  // Handle hook management (doesn't require finding cli.js)
+  if (flags.hookStatus) {
+    const status = getHookStatus();
+    log(`Hook installed: ${status.installed ? 'yes' : 'no'}`);
+    log(`Settings file: ${status.settingsPath}`);
+    process.exit(0);
+  }
+  
+  if (flags.installHook) {
+    const result = installHook();
+    log(result.message);
+    process.exit(result.success ? 0 : 1);
+  }
+  
+  if (flags.removeHook) {
+    const result = removeHook();
+    log(result.message);
+    process.exit(result.success ? 0 : 1);
+  }
+  
+  // Find Claude Code installation
+  const cliInfo = findCliJs();
+  
+  if (!cliInfo) {
+    error('Could not find Claude Code installation.');
+    if (flags.verbose) {
+      showSearchedPaths();
+    } else {
+      error('Run with --verbose to see searched paths.');
+    }
+    error('\nMake sure Claude Code is installed:');
+    error('  https://code.claude.com/docs/en/setup');
+    process.exit(1);
+  }
+  
+  if (flags.verbose) {
+    log(`Found Claude Code: ${cliInfo.path}`);
+    log(`Detection method: ${cliInfo.method}`);
+  }
+  
+  // Handle check
+  if (flags.check) {
+    const status = checkStatus(cliInfo.path);
+    
+    if (status.error) {
+      error(`Error: ${status.error}`);
+      process.exit(1);
+    }
+    
+    if (status.patched) {
+      log('Status: PATCHED');
+      log('Silly words have been replaced with "Thinking"');
+    } else if (status.hasSillyWords) {
+      log('Status: NOT PATCHED');
+      log('Silly words are present. Run without --check to patch.');
+    } else {
+      log('Status: UNKNOWN');
+      log('Could not find silly words array. Version may not be supported.');
+    }
+    
+    if (status.hasBackup) {
+      log('Backup: available (can restore with --restore)');
+    }
+    
+    const hookStatus = getHookStatus();
+    log(`Auto-patch hook: ${hookStatus.installed ? 'installed' : 'not installed'}`);
+    
+    process.exit(status.patched ? 0 : 1);
+  }
+  
+  // Handle restore
+  if (flags.restore) {
+    const success = restoreBackup(cliInfo.path);
+    if (success) {
+      log('Restored original file from backup.');
+      log('Restart Claude Code for changes to take effect.');
+    } else {
+      error('No backup found. Cannot restore.');
+      process.exit(1);
+    }
+    process.exit(0);
+  }
+  
+  // Default action: patch
+  const result = patch(cliInfo.path, { dryRun: flags.dryRun });
+  
+  if (result.success) {
+    if (result.alreadyPatched) {
+      log('Already patched. Nothing to do.');
+    } else if (result.dryRun) {
+      log('DRY RUN - no changes made:');
+      log(result.message);
+    } else {
+      log('Patched successfully!');
+      log('Silly words replaced with "Thinking".');
+      log('Restart Claude Code for changes to take effect.');
+      
+      // Suggest installing hook
+      const hookStatus = getHookStatus();
+      if (!hookStatus.installed) {
+        log('\nTip: Run with --install-hook to auto-patch after updates.');
+      }
+    }
+    process.exit(0);
+  } else {
+    error(`Failed: ${result.message}`);
+    if (flags.verbose) {
+      showSearchedPaths();
+    }
+    process.exit(1);
+  }
+}
+
+main().catch(err => {
+  error(`Unexpected error: ${err.message}`);
+  process.exit(1);
+});
