@@ -10,6 +10,7 @@ Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., yo
 > **Last updated:** 2026-01-13 | **Tested with:** Claude Code 2.1.4, 2.1.5
 
 ![Thinking... instead of silly words](img/screenshot1.png)
+![Thought for Xs instead of Baked/Brewed/etc](img/screenshot2.png)
 
 ## The Problem
 
