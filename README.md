@@ -7,7 +7,7 @@ Remove silly thinking words from Claude Code.
 
 Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
-> **Last updated:** 2026-01-11 | **Tested with:** Claude Code 2.1.4, 2.1.5
+> **Last updated:** 2026-01-13 | **Tested with:** Claude Code 2.1.4, 2.1.5
 
 ![Thinking... instead of silly words](img/screenshot1.png)
 
@@ -23,7 +23,15 @@ Wibbling...
 Clauding...
 ```
 
-This tool replaces them with a simple "Thinking".
+And after thinking completes, it shows completion messages like:
+
+```
+Baked for 42s
+Brewed for 15s
+Churned for 30s
+```
+
+This tool replaces them with simple "Thinking" and "Thought for Xs".
 
 ## Quick Start
 
@@ -42,6 +50,8 @@ That's it! Restart Claude Code for changes to take effect.
 
 ## Features
 
+- **Patches spinner words** ("Flibbertigibbeting..." -> "Thinking...")
+- **Patches completion verbs** ("Baked for 42s" -> "Thought for 42s")
 - Works with native binaries (Bun-compiled) and npm installations
 - **Patches VS Code/VSCodium extension webview** (the UI that shows spinner text)
 - Auto-detects your Claude Code installation
@@ -191,11 +201,13 @@ npx claude-depester --remove-hook    # Remove auto-patch hook
 
 ### How it works
 
-1. **Detection**: Finds the silly words array by unique content markers (e.g., "Flibbertigibbeting", "Discombobulating") rather than variable names (which change every version due to minification)
+1. **Detection**: Finds the silly words arrays by unique content markers (e.g., "Flibbertigibbeting", "Discombobulating") rather than variable names (which change every version due to minification)
 
 2. **Extraction**: For native binaries (Bun-compiled), uses [node-lief](https://www.npmjs.com/package/node-lief) to properly extract the embedded JavaScript - the same approach used by [tweakcc](https://github.com/Piebald-AI/tweakcc)
 
-3. **Patching**: Replaces the array `["Accomplishing",...,"Zigzagging"]` with `["Thinking"]`
+3. **Patching**: Replaces two arrays:
+   - Spinner words: `["Accomplishing",...,"Zigzagging"]` -> `["Thinking"]`
+   - Completion verbs: `["Baked",...,"Worked"]` -> `["Thought"]`
 
 4. **Repacking**: Rebuilds the binary with the modified JavaScript
 
@@ -252,8 +264,16 @@ MIT - see [LICENSE](LICENSE)
 
 ## Appendix: Full List of Silly Words
 
-These are all 184 "thinking words" that Claude Code displays while processing. This tool replaces all of them with "Thinking":
+### Spinner Words (184 words)
 
-> Accomplishing, Actioning, Actualizing, Architecting, Baking, Beaming, Beboppin', Befuddling, Billowing, Blanching, Bloviating, Boogieing, Boondoggling, Booping, Bootstrapping, Brewing, Burrowing, Calculating, Canoodling, Caramelizing, Cascading, Catapulting, Cerebrating, Channeling, Channelling, Choreographing, Churning, Clauding, Coalescing, Cogitating, Combobulating, Composing, Computing, Concocting, Considering, Contemplating, Cooking, Crafting, Creating, Crunching, Crystallizing, Cultivating, Deciphering, Deliberating, Determining, Dilly-dallying, Discombobulating, Doing, Doodling, Drizzling, Ebbing, Effecting, Elucidating, Embellishing, Enchanting, Envisioning, Evaporating, Fermenting, Fiddle-faddling, Finagling, Flambeing, Flibbertigibbeting, Flowing, Flummoxing, Fluttering, Forging, Forming, Frolicking, Frosting, Gallivanting, Galloping, Garnishing, Generating, Germinating, Gitifying, Grooving, Gusting, Harmonizing, Hashing, Hatching, Herding, Honking, Hullaballooing, Hyperspacing, Ideating, Imagining, Improvising, Incubating, Inferring, Infusing, Ionizing, Jitterbugging, Julienning, Kneading, Leavening, Levitating, Lollygagging, Manifesting, Marinating, Meandering, Metamorphosing, Misting, Moonwalking, Moseying, Mulling, Mustering, Musing, Nebulizing, Nesting, Noodling, Nucleating, Orbiting, Orchestrating, Osmosing, Perambulating, Percolating, Perusing, Philosophising, Photosynthesizing, Pollinating, Pondering, Pontificating, Pouncing, Precipitating, Prestidigitating, Processing, Proofing, Propagating, Puttering, Puzzling, Quantumizing, Razzle-dazzling, Razzmatazzing, Recombobulating, Reticulating, Roosting, Ruminating, Sauteing, Scampering, Schlepping, Scurrying, Seasoning, Shenaniganing, Shimmying, Simmering, Skedaddling, Sketching, Slithering, Smooshing, Sock-hopping, Spelunking, Spinning, Sprouting, Stewing, Sublimating, Swirling, Swooping, Symbioting, Synthesizing, Tempering, Thinking, Thundering, Tinkering, Tomfoolering, Topsy-turvying, Transfiguring, Transmuting, Twisting, Undulating, Unfurling, Unravelling, Vibing, Waddling, Wandering, Warping, Whatchamacalliting, Whirlpooling, Whirring, Whisking, Wibbling, Working, Wrangling, Zesting, Zigzagging
+These are displayed while Claude is thinking. This tool replaces all of them with "Thinking":
 
-<sub>**Keywords:** claude code thinking words, claude code spinner, claude code flibbertigibbeting, claude code discombobulating, claude code clauding, claude code smooshing, claude code wibbling, anthropic claude code patch, remove silly words claude, claude code customization</sub>
+> Accomplishing, Actioning, Actualizing, Architecting, Baking, Beaming, Beboppin', Befuddling, Billowing, Blanching, Bloviating, Boogieing, Boondoggling, Booping, Bootstrapping, Brewing, Burrowing, Calculating, Canoodling, Caramelizing, Cascading, Catapulting, Cerebrating, Channeling, Channelling, Choreographing, Churning, Clauding, Coalescing, Cogitating, Combobulating, Composing, Computing, Concocting, Considering, Contemplating, Cooking, Crafting, Creating, Crunching, Crystallizing, Cultivating, Deciphering, Deliberating, Determining, Dilly-dallying, Discombobulating, Doing, Doodling, Drizzling, Ebbing, Effecting, Elucidating, Embellishing, Enchanting, Envisioning, Evaporating, Fermenting, Fiddle-faddling, Finagling, Flambeing, Flibbertigibbeting, Flowing, Flummoxing, Fluttering, Forging, Forming, Frolicking, Frosting, Gallivanting, Galloping, Garnishing, Generating, Germinating, Gitifying, Grooving, Gusting, Harmonizing, Hashing, Hatching, Herding, Honking, Hullaballooing, Hyperspacing, Ideating, Imagining, Improvising, Incubating, Inferring, Infusing, Ionizing, Jitterbugging, Julienning, Kneading, Leavening, Levitating, Lollygagging, Manifesting, Marinating, Meandering, Metamorphosing, Misting, Moonwalking, Moseying, Mulling, Mustering, Musing, Nebulizing, Nesting, Noodling, Nucleating, Orbiting, Orchestrating, Osmosing, Perambulating, Percolating, Perusing, Philosophising, Photosynthesizing, Pollinating, Pondering, Pontificating, Pouncing, Precipitating, Prestidigitating, Processing, Proofing, Propagating, Puttering, Puzzling, Quantumizing, Razzle-dazzling, Razzmatazzing, Recombobulating, Reticulating, Roosting, Ruminating, Sauteing, Scampering, Schlepping, Scurrying, Seasoning, Shenaniganing, Shimmying, Simmering, Skedaddling, Sketching, Slithering, Smooshing, Sock-hopping, Spelunking, Spinning, Sprouting, Stewing, Sublimating, Swirling, Swooping, Symbioting, Synthesizing, Tempering, Thinking, Thundering, Tinkering, Tomfoolering, Topsy-turvying, Transfiguring...
+
+### Completion Verbs (8 words)
+
+These are displayed after thinking completes (e.g., "Baked for 42s"). This tool replaces all of them with "Thought":
+
+> Baked, Brewed, Churned, Cogitated, Cooked, Crunched, Sauteed, Worked
+
+<sub>**Keywords:** claude code thinking words, claude code spinner, claude code flibbertigibbeting, claude code discombobulating, claude code clauding, claude code smooshing, claude code wibbling, anthropic claude code patch, remove silly words claude, claude code customization, claude code baked for, claude code completion verbs</sub>

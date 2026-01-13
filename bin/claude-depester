@@ -38,6 +38,17 @@ function error(...msg) {
   console.error(...msg);
 }
 
+function formatPatchDetails(result) {
+  const parts = [];
+  if (result.spinnerCount > 0) {
+    parts.push(`spinner(${result.spinnerCount})`);
+  }
+  if (result.completionCount > 0) {
+    parts.push(`completion(${result.completionCount})`);
+  }
+  return parts.length > 0 ? ` [${parts.join(' + ')}]` : '';
+}
+
 function showHelp() {
   console.log(`
 claude-depester v${VERSION}
@@ -181,10 +192,12 @@ async function main() {
             log('  -> Already patched\n');
             skipCount++;
           } else if (result.dryRun) {
-            log('  -> Would patch\n');
+            const details = formatPatchDetails(result);
+            log(`  -> Would patch${details}\n`);
             successCount++;
           } else {
-            log('  -> Patched!\n');
+            const details = formatPatchDetails(result);
+            log(`  -> Patched${details}\n`);
             successCount++;
           }
         } else {
