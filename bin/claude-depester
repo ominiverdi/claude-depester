@@ -3,6 +3,9 @@
 /**
  * claude-depester CLI
  * Remove silly thinking words from Claude Code
+ *
+ * @author Lorenzo Becchi
+ * @license MIT
  */
 
 const { findCliJs, findAllClaudeCode, getSearchedPaths } = require('../lib/detector');
