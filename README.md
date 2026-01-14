@@ -7,7 +7,9 @@ Remove silly thinking words from Claude Code.
 
 Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
-> **Last updated:** 2026-01-14 | **Tested with:** Claude Code 2.1.4, 2.1.5, 2.1.7
+> **Last updated:** 2026-01-14 | **Tested with:** Claude Code 2.1.4, 2.1.5, 2.1.7 | **Platforms:** Linux, macOS, Windows
+>
+> v1.3.2: Fixed macOS npm/Homebrew detection ([#2](https://github.com/ominiverdi/claude-depester/issues/2))
 
 ![Thinking... instead of silly words](img/thinking.png)
 ![Thought for Xs instead of Baked/Brewed/etc](img/thought.png)
