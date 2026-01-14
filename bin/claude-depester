@@ -148,7 +148,8 @@ async function main() {
     for (const inst of installations) {
       const status = checkStatus(inst.path, { type: inst.type });
       const statusStr = status.patched ? '[PATCHED]' : '[NOT PATCHED]';
-      const typeStr = inst.type === 'webview' ? ' (webview)' : inst.type === 'binary' ? ' (binary)' : '';
+      // Use actual detected type from status, not the detector's guess
+      const typeStr = status.isWebview ? ' (webview)' : status.isBinary ? ' (binary)' : '';
       log(`${statusStr} ${inst.method}${typeStr}`);
       log(`  ${inst.path}\n`);
     }
