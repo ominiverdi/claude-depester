@@ -7,7 +7,7 @@ Remove silly thinking words from Claude Code.
 
 Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
-> **Last updated:** 2026-01-13 | **Tested with:** Claude Code 2.1.4, 2.1.5
+> **Last updated:** 2026-01-14 | **Tested with:** Claude Code 2.1.4, 2.1.5, 2.1.7
 
 ![Thinking... instead of silly words](img/thinking.png)
 ![Thought for Xs instead of Baked/Brewed/etc](img/thought.png)
