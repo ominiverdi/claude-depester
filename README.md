@@ -8,9 +8,9 @@ Remove silly thinking words from Claude Code.
 
 Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
-> **Last updated:** 2026-01-14 | **Tested with:** Claude Code 2.1.4, 2.1.5, 2.1.7 | **Platforms:** Linux, macOS, Windows
+> **Last updated:** 2026-01-18 | **Tested with:** Claude Code 2.1.4 - 2.1.12 | **Platforms:** Linux, macOS, Windows
 >
-> v1.3.2: Fixed macOS npm/Homebrew detection ([#2](https://github.com/ominiverdi/claude-depester/issues/2))
+> v1.3.3: Added `--debug` and `--log` flags for troubleshooting auto-patch issues ([#3](https://github.com/ominiverdi/claude-depester/issues/3))
 
 ![Thinking... instead of silly words](img/thinking.png)
 ![Thought for Xs instead of Baked/Brewed/etc](img/thought.png)
@@ -75,6 +75,8 @@ That's it! Restart Claude Code for changes to take effect.
 | `npx claude-depester --check` | Check patch status |
 | `npx claude-depester --restore` | Restore original from backup |
 | `npx claude-depester --verbose` | Show detailed info |
+| `npx claude-depester --debug` | Show detailed debug info (for troubleshooting) |
+| `npx claude-depester --log` | Write results to `~/.claude/depester.log` |
 | `npx claude-depester --install-hook` | Auto-patch after updates |
 | `npx claude-depester --remove-hook` | Remove auto-patch hook |
 | `npx claude-depester --hook-status` | Check hook status |
@@ -139,7 +141,7 @@ The `--install-hook` command adds a SessionStart hook to `~/.claude/settings.jso
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-depester --silent"
+            "command": "npx claude-depester --all --silent --log"
           }
         ]
       }
@@ -148,7 +150,12 @@ The `--install-hook` command adds a SessionStart hook to `~/.claude/settings.jso
 }
 ```
 
-Every time Claude Code starts, it checks and re-applies the patch if needed.
+Every time Claude Code starts, it checks and re-applies the patch if needed. The `--log` flag writes results to `~/.claude/depester.log` (keeps last 50 entries) for troubleshooting.
+
+> **Note:** If you installed the hook with an older version, reinstall it to get logging:
+> ```bash
+> npx claude-depester --remove-hook && npx claude-depester --install-hook
+> ```
 
 ## Troubleshooting
 
@@ -191,8 +198,9 @@ Then **fully restart VS Code** (not just reload window).
 
 The detection uses content-based matching, so it should survive version updates.
 If the patch fails:
-1. Open an issue with your Claude Code version (`claude --version`)
-2. Include the output of `npx claude-depester --dry-run --verbose`
+1. Run `npx claude-depester --debug` to see detailed diagnostics
+2. Open an issue with your Claude Code version (`claude --version`)
+3. Include the output of `npx claude-depester --debug`
 
 ### Want to undo everything
 
@@ -219,6 +227,7 @@ npx claude-depester --remove-hook    # Remove auto-patch hook
 
 - **Backup**: `<original-file>.depester.backup`
 - **Hook config**: `~/.claude/settings.json`
+- **Debug log**: `~/.claude/depester.log` (when using `--log`)
 
 ## Requirements
 
