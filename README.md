@@ -8,9 +8,9 @@ Remove silly thinking words from Claude Code.
 
 Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
-> **Last updated:** 2026-01-18 | **Tested with:** Claude Code 2.1.4 - 2.1.12 | **Platforms:** Linux, macOS, Windows
+> **Last updated:** 2026-01-21 | **Tested with:** Claude Code 2.1.4 - 2.1.12 | **Platforms:** Linux, macOS, Windows
 >
-> v1.3.3: Added `--debug` and `--log` flags for troubleshooting auto-patch issues ([#3](https://github.com/ominiverdi/claude-depester/issues/3))
+> v1.3.4: Recommend shell wrapper over SessionStart hook for reliable auto-patching ([#3](https://github.com/ominiverdi/claude-depester/issues/3))
 
 ![Thinking... instead of silly words](img/thinking.png)
 ![Thought for Xs instead of Baked/Brewed/etc](img/thought.png)
@@ -45,12 +45,20 @@ npx claude-depester --dry-run
 
 # Patch Claude Code
 npx claude-depester
-
-# Auto-patch after updates (recommended)
-npx claude-depester --install-hook
 ```
 
-That's it! Restart Claude Code for changes to take effect.
+Restart Claude Code for changes to take effect.
+
+### Auto-patch after updates (recommended)
+
+Add a shell wrapper that patches before each invocation:
+
+```bash
+# Add to your .bashrc or .zshrc
+cl() { npx claude-depester --all --silent --log ; claude "$@" ; }
+```
+
+Then use `cl` instead of `claude`. This ensures patching happens *before* Claude loads.
 
 ## Features
 
@@ -60,7 +68,7 @@ That's it! Restart Claude Code for changes to take effect.
 - **Patches VS Code/VSCodium extension webview** (the UI that shows spinner text)
 - Auto-detects your Claude Code installation
 - Creates backup before patching (can restore anytime)
-- Optional SessionStart hook for auto-patching after updates
+- Shell wrapper for reliable auto-patching before Claude loads
 - Content-based detection survives version updates
 - Cross-platform: Linux, macOS, Windows (WSL/Git Bash)
 
@@ -117,7 +125,7 @@ The tool auto-detects your installation. Use `--list` to see all found installat
 
 ## After Claude Code Updates
 
-With the hook installed (`--install-hook`), patching happens automatically on startup.
+If you're using the shell wrapper (recommended), patching happens automatically before each session.
 
 Otherwise, just run `npx claude-depester` again after updating.
 
@@ -129,7 +137,9 @@ npx claude-depester --restore
 
 This restores from the backup created during patching.
 
-## How the Hook Works
+## SessionStart Hook (Alternative)
+
+> **Note:** The shell wrapper is the recommended approach. The SessionStart hook has a limitation: it runs *after* Claude is already loaded into memory, so the patch only takes effect on the *next* session after an update.
 
 The `--install-hook` command adds a SessionStart hook to `~/.claude/settings.json`:
 
@@ -150,11 +160,11 @@ The `--install-hook` command adds a SessionStart hook to `~/.claude/settings.jso
 }
 ```
 
-Every time Claude Code starts, it checks and re-applies the patch if needed. The `--log` flag writes results to `~/.claude/depester.log` (keeps last 50 entries) for troubleshooting.
+This patches the file on disk at session start, but the current session may still show silly words until you restart. The `--log` flag writes results to `~/.claude/depester.log` (keeps last 50 entries) for troubleshooting.
 
-> **Note:** If you installed the hook with an older version, reinstall it to get logging:
-> ```bash
-> npx claude-depester --remove-hook && npx claude-depester --install-hook
+To install or update the hook:
+```bash
+npx claude-depester --install-hook
 > ```
 
 ## Troubleshooting
@@ -206,7 +216,8 @@ If the patch fails:
 
 ```bash
 npx claude-depester --restore --all  # Restore all installations
-npx claude-depester --remove-hook    # Remove auto-patch hook
+npx claude-depester --remove-hook    # Remove hook (if installed)
+# Remove the shell wrapper from your .bashrc/.zshrc if added
 ```
 
 ## Technical Details

@@ -1,7 +1,7 @@
 {
   "name": "claude-depester",
-  "version": "1.3.3",
-  "description": "Remove silly thinking words and completion verbs from Claude Code. Auto-patches and survives updates via SessionStart hook.",
+  "version": "1.3.4",
+  "description": "Remove silly thinking words and completion verbs from Claude Code. Auto-patches via shell wrapper.",
   "main": "lib/patcher.js",
   "bin": {
     "claude-depester": "./bin/claude-depester"
