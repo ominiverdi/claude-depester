@@ -8,9 +8,9 @@ Patches Claude Code CLI and VS Code extension to replace whimsical loading words
 
 Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
-> **Last updated:** 2026-01-21 | **Tested with:** Claude Code 2.1.4 - 2.1.12 | **Platforms:** Linux, macOS, Windows
+> **Last updated:** 2026-01-22 | **Tested with:** Claude Code 2.1.15 | **Platforms:** Linux, macOS, Windows
 >
-> v1.3.4: Recommend shell wrapper over SessionStart hook for reliable auto-patching ([#3](https://github.com/ominiverdi/claude-depester/issues/3))
+> v1.3.5: Fix VS Code binary completion verbs patching for new bytecode array structure
 
 **CLI - Spinner:**
 
