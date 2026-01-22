@@ -4,7 +4,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/claude-depester.svg)](https://www.npmjs.com/package/claude-depester)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Remove silly thinking words from Claude Code.
+Patches Claude Code CLI and VS Code extension to replace whimsical loading words with simple 'Thinking'.
 
 Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
@@ -12,8 +12,17 @@ Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., yo
 >
 > v1.3.4: Recommend shell wrapper over SessionStart hook for reliable auto-patching ([#3](https://github.com/ominiverdi/claude-depester/issues/3))
 
-![Thinking... instead of silly words](img/thinking.png)
+**CLI - Spinner:**
+
+![Thinking... instead of whimsical words](img/thinking.png)
+
+**CLI - Completion:**
+
 ![Thought for Xs instead of Baked/Brewed/etc](img/thought.png)
+
+**VS Code Extension:**
+
+![VS Code extension also patched](img/vscode.png)
 
 ## The Problem
 
@@ -279,6 +288,12 @@ This project builds upon work by:
 - [tweakcc](https://github.com/Piebald-AI/tweakcc) - For the proper Bun binary extraction/repacking approach
 - [vemv's gist](https://gist.github.com/vemv/c6333d53ede16198a23eb95425051b7b) - Original simple patch idea
 - [heromantf's bun extractor](https://gist.github.com/heromantf/7db88edcb7b1c0c35067244584a01afc) - Bun binary structure documentation
+
+## Donors
+
+Thanks to these generous supporters:
+
+- [@gyohng](https://github.com/gyohng)
 
 ## License
 
