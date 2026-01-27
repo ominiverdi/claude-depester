@@ -8,9 +8,9 @@ Patches Claude Code CLI and VS Code extension to replace whimsical loading words
 
 Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
-> **Last updated:** 2026-01-22 | **Tested with:** Claude Code 2.1.15 | **Platforms:** Linux, macOS, Windows
+> **Last updated:** 2026-01-28 | **Tested with:** Claude Code 2.1.15 | **Platforms:** Linux, macOS, Windows
 >
-> v1.3.5: Fix VS Code binary completion verbs patching for new bytecode array structure
+> v1.3.6: Add support for VS Code Remote SSH and Cursor Remote SSH (`.vscode-server`, `.cursor-server`)
 
 **CLI - Spinner:**
 
@@ -75,6 +75,7 @@ Then use `cl` instead of `claude`. This ensures patching happens *before* Claude
 - **Patches completion verbs** ("Baked for 42s" -> "Thought for 42s")
 - Works with native binaries (Bun-compiled) and npm installations
 - **Patches VS Code/VSCodium extension webview** (the UI that shows spinner text)
+- **Supports remote development** (VS Code Remote SSH, Cursor SSH)
 - Auto-detects your Claude Code installation
 - Creates backup before patching (can restore anytime)
 - Shell wrapper for reliable auto-patching before Claude loads
@@ -108,6 +109,8 @@ Then use `cl` instead of `claude`. This ensures patching happens *before* Claude
 | VS Code extension | `~/.vscode/extensions/anthropic.claude-code-*/` | Fully supported |
 | VS Code webview | `~/.vscode/extensions/.../webview/index.js` | Fully supported |
 | VSCodium extension | `~/.vscode-oss/extensions/anthropic.claude-code-*/` | Fully supported |
+| VS Code Remote (SSH) | `~/.vscode-server/extensions/anthropic.claude-code-*/` | Fully supported |
+| Cursor Remote (SSH) | `~/.cursor-server/extensions/anthropic.claude-code-*/` | Fully supported |
 | Local npm | `~/.claude/local/node_modules/@anthropic-ai/claude-code/` | Fully supported |
 | Global npm | `npm root -g`/@anthropic-ai/claude-code/ | Fully supported |
 
@@ -131,6 +134,8 @@ Then use `cl` instead of `claude`. This ensures patching happens *before* Claude
 The tool auto-detects your installation. Use `--list` to see all found installations, and `--all` to patch them all at once.
 
 > **Important for VS Code users:** The extension has TWO places with spinner words - the native binary AND the webview. Use `--all` to patch both!
+
+> **Remote Development (SSH):** When using VS Code Remote or Cursor over SSH, run the tool **on the remote server** to patch `~/.vscode-server` or `~/.cursor-server`.
 
 ## After Claude Code Updates
 
