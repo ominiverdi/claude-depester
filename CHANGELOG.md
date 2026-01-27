@@ -2,6 +2,15 @@
 
 All notable changes to claude-depester will be documented in this file.
 
+## [1.3.6] - 2026-01-28
+
+### Added
+- **Remote development support**: VS Code Remote SSH (`~/.vscode-server`), VS Code Insiders Remote (`~/.vscode-server-insiders`), and Cursor Remote SSH (`~/.cursor-server`)
+- New keywords in package.json for better discoverability: `vscode-remote`, `cursor`, `ssh`
+
+### Thanks
+- [@gyohng](https://github.com/gyohng) for suggesting remote server support
+
 ## [1.3.5] - 2026-01-22
 
 **Tested with:** Claude Code 2.1.15
