@@ -2,6 +2,21 @@
 
 All notable changes to claude-depester will be documented in this file.
 
+## [1.4.0] - 2026-02-10
+
+**Tested with:** Claude Code 2.1.4 - 2.1.38
+
+### Fixed
+- **MachO binary bloat** ([#5](https://github.com/ominiverdi/claude-depester/issues/5)): Patched MachO binaries were ~1.6GB instead of ~183MB. Now uses raw file write instead of LIEF write() for MachO/PE, producing identical-size output
+- **New Bun data format**: Support for both old (36-byte) and new (52-byte) module struct sizes used in Claude Code 2.1.37+
+- **Status check after patching**: extractClaudeJs now correctly returns patched contents instead of falling through to unpatched bytecode
+
+### Changed
+- **All commands operate on all installations by default**: `--all` flag removed. Patch, check, and restore now target all found installations automatically (`--all` still accepted silently for backwards compatibility)
+- **New `--path <file>` flag**: Target a specific file instead of auto-detecting
+- Updated node-lief dependency from 0.1.8 to 1.0.0
+- Detect `cli.js`/`cli.js.jsc` entrypoint names (Claude Code 2.0.69+)
+
 ## [1.3.6] - 2026-01-28
 
 ### Added

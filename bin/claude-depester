@@ -8,7 +8,7 @@
  * @license MIT
  */
 
-const { findCliJs, findAllClaudeCode, getSearchedPaths } = require('../lib/detector');
+const { findAllClaudeCode, getSearchedPaths } = require('../lib/detector');
 const { patch, checkStatus, getDebugInfo, restoreBackup } = require('../lib/patcher');
 const { installHook, removeHook, getHookStatus, searchHookLogs, appendLog, readLog, LOG_PATH } = require('../lib/hooks');
 
@@ -29,9 +29,16 @@ const flags = {
   verbose: args.includes('--verbose'),
   debug: args.includes('--debug') || args.includes('-d'),
   log: args.includes('--log'),
-  all: args.includes('--all') || args.includes('-a'),
-  list: args.includes('--list') || args.includes('-l')
+  list: args.includes('--list') || args.includes('-l'),
+  // --all is accepted silently for backwards compatibility (all is now the default)
 };
+
+// Parse --path <file>
+let pathOverride = null;
+const pathIdx = args.indexOf('--path');
+if (pathIdx !== -1 && args[pathIdx + 1]) {
+  pathOverride = args[pathIdx + 1];
+}
 
 function log(...msg) {
   if (!flags.silent) {
@@ -65,12 +72,12 @@ USAGE:
   npx claude-depester [options]
 
 OPTIONS:
-  (no options)      Patch Claude Code now
-  -a, --all         Patch ALL installations (CLI + VS Code extensions)
-  -l, --list        List all found installations
-  -c, --check       Check if Claude Code is patched
-  -r, --restore     Restore original file from backup
+  (no options)      Patch all Claude Code installations
+  -l, --list        List all found installations and their status
+  -c, --check       Check patch status of all installations
+  -r, --restore     Restore all installations from backup
   -n, --dry-run     Preview changes without applying
+  --path <file>     Target a specific file instead of auto-detecting
   
   --install-hook    Add SessionStart hook (auto-patch after updates)
   --remove-hook     Remove SessionStart hook
@@ -84,12 +91,13 @@ OPTIONS:
   -h, --help        Show this help
 
 EXAMPLES:
-  npx claude-depester                 # Patch first found installation
-  npx claude-depester --all           # Patch ALL installations
-  npx claude-depester --list          # List all installations
+  npx claude-depester                 # Patch all installations
+  npx claude-depester --list          # Show all installations and status
   npx claude-depester --check         # Check status
+  npx claude-depester --restore       # Undo all patches
   npx claude-depester --install-hook  # Auto-patch after updates
-  npx claude-depester --restore       # Undo patch
+  npx claude-depester --dry-run       # Preview without patching
+  npx claude-depester --path ./claude # Patch a specific file
   npx claude-depester --debug         # Troubleshoot issues
 
 MORE INFO:
@@ -107,6 +115,23 @@ function showSearchedPaths() {
     error(`  [${method}]`);
     error(`    ${path}`);
   }
+}
+
+/**
+ * Find installations to operate on.
+ * If --path is given, returns a single-item array for that path.
+ * Otherwise, returns all auto-detected installations.
+ */
+function getInstallations() {
+  if (pathOverride) {
+    const fs = require('fs');
+    if (!fs.existsSync(pathOverride)) {
+      error(`File not found: ${pathOverride}`);
+      process.exit(1);
+    }
+    return [{ path: pathOverride, method: `--path ${pathOverride}`, type: undefined }];
+  }
+  return findAllClaudeCode();
 }
 
 async function main() {
@@ -141,156 +166,10 @@ async function main() {
     process.exit(result.success ? 0 : 1);
   }
   
-  // Handle --list
-  if (flags.list) {
-    const installations = findAllClaudeCode();
-    if (installations.length === 0) {
-      error('No Claude Code installations found.');
-      if (flags.verbose) {
-        showSearchedPaths();
-      }
-      process.exit(1);
-    }
-    
-    log(`Found ${installations.length} installation(s):\n`);
-    for (const inst of installations) {
-      const status = checkStatus(inst.path, { type: inst.type });
-      const statusStr = status.patched ? '[PATCHED]' : '[NOT PATCHED]';
-      // Use actual detected type from status, not the detector's guess
-      const typeStr = status.isWebview ? ' (webview)' : status.isBinary ? ' (binary)' : '';
-      log(`${statusStr} ${inst.method}${typeStr}`);
-      log(`  ${inst.path}\n`);
-    }
-    process.exit(0);
-  }
-  
-  // Handle --all (patch all installations)
-  if (flags.all) {
-    const installations = findAllClaudeCode();
-    if (installations.length === 0) {
-      error('No Claude Code installations found.');
-      if (flags.log) {
-        appendLog('No installations found', { action: 'patch-all' });
-      }
-      if (flags.verbose) {
-        showSearchedPaths();
-      }
-      process.exit(1);
-    }
-    
-    log(`Found ${installations.length} installation(s):\n`);
-    
-    let successCount = 0;
-    let skipCount = 0;
-    let failCount = 0;
-    const logResults = [];
-    
-    for (const inst of installations) {
-      log(`${inst.method}:`);
-      log(`  ${inst.path}`);
-      
-      if (flags.restore) {
-        const success = restoreBackup(inst.path);
-        if (success) {
-          log('  -> Restored from backup\n');
-          successCount++;
-          logResults.push({ path: inst.path, method: inst.method, result: 'restored' });
-        } else {
-          log('  -> No backup found\n');
-          skipCount++;
-          logResults.push({ path: inst.path, method: inst.method, result: 'no-backup' });
-        }
-      } else {
-        // Get debug info before patching for the log
-        const debugBefore = flags.log ? getDebugInfo(inst.path, { type: inst.type }) : null;
-        
-        const result = patch(inst.path, { dryRun: flags.dryRun, type: inst.type });
-        if (result.success) {
-          if (result.alreadyPatched) {
-            log('  -> Already patched\n');
-            skipCount++;
-            logResults.push({ 
-              path: inst.path, 
-              method: inst.method, 
-              result: 'already-patched',
-              debug: debugBefore
-            });
-          } else if (result.dryRun) {
-            const details = formatPatchDetails(result);
-            log(`  -> Would patch${details}\n`);
-            successCount++;
-            logResults.push({ path: inst.path, method: inst.method, result: 'dry-run' });
-          } else {
-            const details = formatPatchDetails(result);
-            log(`  -> Patched${details}\n`);
-            successCount++;
-            logResults.push({ 
-              path: inst.path, 
-              method: inst.method, 
-              result: 'patched',
-              spinnerCount: result.spinnerCount,
-              completionCount: result.completionCount,
-              debug: debugBefore
-            });
-          }
-        } else {
-          log(`  -> Failed: ${result.message}\n`);
-          failCount++;
-          logResults.push({ 
-            path: inst.path, 
-            method: inst.method, 
-            result: 'failed', 
-            error: result.message,
-            debug: debugBefore
-          });
-        }
-      }
-    }
-    
-    log(`Done: ${successCount} patched, ${skipCount} skipped, ${failCount} failed`);
-    if (!flags.dryRun && successCount > 0) {
-      log('Restart Claude Code for changes to take effect.');
-    }
-    
-    if (flags.log) {
-      appendLog('Patch all completed', {
-        action: 'patch-all',
-        found: installations.length,
-        patched: successCount,
-        skipped: skipCount,
-        failed: failCount,
-        results: logResults
-      });
-    }
-    
-    process.exit(failCount > 0 ? 1 : 0);
-  }
-  
-  // Find Claude Code installation (single)
-  const cliInfo = findCliJs();
-  
-  if (!cliInfo) {
-    error('Could not find Claude Code installation.');
-    if (flags.verbose) {
-      showSearchedPaths();
-    } else {
-      error('Run with --verbose to see searched paths.');
-    }
-    error('\nMake sure Claude Code is installed:');
-    error('  https://code.claude.com/docs/en/setup');
-    process.exit(1);
-  }
-  
-  if (flags.verbose) {
-    log(`Found Claude Code: ${cliInfo.path}`);
-    log(`Detection method: ${cliInfo.method}`);
-  }
-  
-  // Handle debug
+  // Handle --debug (shows info for all installations)
   if (flags.debug) {
     log('=== DEPESTER DEBUG INFO ===\n');
     
-    // Get debug info for all installations
     const installations = findAllClaudeCode();
     if (installations.length === 0) {
       log('No installations found.\n');
@@ -370,7 +249,6 @@ async function main() {
           if (entry.data.found !== undefined) {
             log(`  Found: ${entry.data.found}, Patched: ${entry.data.patched}, Skipped: ${entry.data.skipped}, Failed: ${entry.data.failed}`);
           }
-          // Only show per-installation details if there was a failure or unexpected result
           if (entry.data.results) {
             const hasIssue = entry.data.results.some(r => 
               r.result === 'failed' || 
@@ -398,77 +276,215 @@ async function main() {
     process.exit(0);
   }
   
-  // Handle check
-  if (flags.check) {
-    const status = checkStatus(cliInfo.path, { type: cliInfo.type });
-    
-    if (status.error) {
-      error(`Error: ${status.error}`);
-      process.exit(1);
+  // Find installations
+  const installations = getInstallations();
+  if (installations.length === 0) {
+    error('No Claude Code installations found.');
+    if (flags.log) {
+      appendLog('No installations found', { action: flags.check ? 'check' : flags.restore ? 'restore' : 'patch' });
     }
-    
-    if (status.patched) {
-      log('Status: PATCHED');
-      log('Silly words have been replaced with "Thinking"');
-    } else if (status.hasSillyWords) {
-      log('Status: NOT PATCHED');
-      log('Silly words are present. Run without --check to patch.');
+    if (flags.verbose) {
+      showSearchedPaths();
     } else {
-      log('Status: UNKNOWN');
-      log('Could not find silly words array. Version may not be supported.');
+      error('Run with --verbose to see searched paths.');
+    }
+    process.exit(1);
+  }
+  
+  // Handle --list
+  if (flags.list) {
+    log(`Found ${installations.length} installation(s):\n`);
+    for (const inst of installations) {
+      const status = checkStatus(inst.path, { type: inst.type });
+      const statusStr = status.patched ? '[PATCHED]' : '[NOT PATCHED]';
+      const typeStr = status.isWebview ? ' (webview)' : status.isBinary ? ' (binary)' : '';
+      log(`${statusStr} ${inst.method}${typeStr}`);
+      log(`  ${inst.path}\n`);
+    }
+    process.exit(0);
+  }
+  
+  // Handle --check
+  if (flags.check) {
+    let allPatched = true;
+    let anyError = false;
+    
+    if (installations.length > 1) {
+      log(`Found ${installations.length} installation(s):\n`);
     }
     
-    if (status.hasBackup) {
-      log('Backup: available (can restore with --restore)');
+    for (const inst of installations) {
+      const status = checkStatus(inst.path, { type: inst.type });
+      
+      if (status.error) {
+        error(`${inst.method}: Error - ${status.error}`);
+        anyError = true;
+        continue;
+      }
+      
+      if (installations.length > 1) {
+        const statusStr = status.patched ? 'PATCHED' : 'NOT PATCHED';
+        log(`[${statusStr}] ${inst.method}`);
+        log(`  ${inst.path}`);
+        if (status.hasBackup) log('  Backup: available');
+        log('');
+      } else {
+        if (status.patched) {
+          log('Status: PATCHED');
+          log('Silly words have been replaced with "Thinking"');
+        } else if (status.hasSillyWords) {
+          log('Status: NOT PATCHED');
+          log('Silly words are present. Run without --check to patch.');
+        } else {
+          log('Status: UNKNOWN');
+          log('Could not find silly words array. Version may not be supported.');
+        }
+        if (status.hasBackup) {
+          log('Backup: available (can restore with --restore)');
+        }
+      }
+      
+      if (!status.patched) allPatched = false;
     }
     
     const hookStatus = getHookStatus();
     log(`Auto-patch hook: ${hookStatus.installed ? 'installed' : 'not installed'}`);
     
-    process.exit(status.patched ? 0 : 1);
+    process.exit(allPatched && !anyError ? 0 : 1);
   }
   
-  // Handle restore
+  // Handle --restore
   if (flags.restore) {
-    const success = restoreBackup(cliInfo.path);
-    if (success) {
-      log('Restored original file from backup.');
-      log('Restart Claude Code for changes to take effect.');
-    } else {
-      error('No backup found. Cannot restore.');
-      process.exit(1);
+    if (installations.length > 1) {
+      log(`Found ${installations.length} installation(s):\n`);
     }
-    process.exit(0);
-  }
-  
-  // Default action: patch
-  const result = patch(cliInfo.path, { dryRun: flags.dryRun, type: cliInfo.type });
-  
-  if (result.success) {
-    if (result.alreadyPatched) {
-      log('Already patched. Nothing to do.');
-    } else if (result.dryRun) {
-      log('DRY RUN - no changes made:');
-      log(result.message);
-    } else {
-      log('Patched successfully!');
-      log('Silly words replaced with "Thinking".');
-      log('Restart Claude Code for changes to take effect.');
-      
-      // Suggest installing hook
-      const hookStatus = getHookStatus();
-      if (!hookStatus.installed) {
-        log('\nTip: Run with --install-hook to auto-patch after updates.');
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const inst of installations) {
+      const success = restoreBackup(inst.path);
+      if (installations.length > 1) {
+        log(`${inst.method}:`);
+        log(`  ${inst.path}`);
+      }
+      if (success) {
+        if (installations.length > 1) {
+          log('  -> Restored from backup\n');
+        } else {
+          log('Restored original file from backup.');
+        }
+        successCount++;
+      } else {
+        if (installations.length > 1) {
+          log('  -> No backup found\n');
+        } else {
+          error('No backup found. Cannot restore.');
+        }
+        failCount++;
       }
     }
-    process.exit(0);
-  } else {
-    error(`Failed: ${result.message}`);
-    if (flags.verbose) {
-      showSearchedPaths();
+    
+    if (successCount > 0) {
+      log('Restart Claude Code for changes to take effect.');
     }
-    process.exit(1);
+    process.exit(failCount > 0 && successCount === 0 ? 1 : 0);
   }
+  
+  // Default action: patch all installations
+  if (installations.length > 1 || flags.verbose) {
+    log(`Found ${installations.length} installation(s):\n`);
+  }
+  
+  let successCount = 0;
+  let skipCount = 0;
+  let failCount = 0;
+  const logResults = [];
+  
+  for (const inst of installations) {
+    if (installations.length > 1 || flags.verbose) {
+      log(`${inst.method}:`);
+      log(`  ${inst.path}`);
+    }
+    
+    const debugBefore = flags.log ? getDebugInfo(inst.path, { type: inst.type }) : null;
+    
+    const result = patch(inst.path, { dryRun: flags.dryRun, type: inst.type });
+    if (result.success) {
+      if (result.alreadyPatched) {
+        if (installations.length > 1 || flags.verbose) {
+          log('  -> Already patched\n');
+        }
+        skipCount++;
+        logResults.push({ 
+          path: inst.path, method: inst.method, result: 'already-patched', debug: debugBefore
+        });
+      } else if (result.dryRun) {
+        const details = formatPatchDetails(result);
+        if (installations.length > 1 || flags.verbose) {
+          log(`  -> Would patch${details}\n`);
+        } else {
+          log(`DRY RUN - would patch${details}`);
+          log(result.message);
+        }
+        successCount++;
+        logResults.push({ path: inst.path, method: inst.method, result: 'dry-run' });
+      } else {
+        const details = formatPatchDetails(result);
+        if (installations.length > 1 || flags.verbose) {
+          log(`  -> Patched${details}\n`);
+        }
+        successCount++;
+        logResults.push({ 
+          path: inst.path, method: inst.method, result: 'patched',
+          spinnerCount: result.spinnerCount, completionCount: result.completionCount,
+          debug: debugBefore
+        });
+      }
+    } else {
+      if (installations.length > 1 || flags.verbose) {
+        log(`  -> Failed: ${result.message}\n`);
+      } else {
+        error(`Failed: ${result.message}`);
+      }
+      failCount++;
+      logResults.push({ 
+        path: inst.path, method: inst.method, result: 'failed', error: result.message,
+        debug: debugBefore
+      });
+    }
+  }
+  
+  // Summary
+  if (successCount > 0 && !flags.dryRun) {
+    if (skipCount === 0 && failCount === 0 && installations.length === 1) {
+      log('Patched successfully!');
+      log('Silly words replaced with "Thinking".');
+    } else if (installations.length > 1) {
+      log(`Done: ${successCount} patched, ${skipCount} already patched, ${failCount} failed`);
+    }
+    log('Restart Claude Code for changes to take effect.');
+    
+    const hookStatus = getHookStatus();
+    if (!hookStatus.installed) {
+      log('\nTip: Run with --install-hook to auto-patch after updates.');
+    }
+  } else if (skipCount > 0 && successCount === 0 && failCount === 0) {
+    log('Already patched. Nothing to do.');
+  }
+  
+  if (flags.log) {
+    appendLog('Patch completed', {
+      action: flags.dryRun ? 'dry-run' : 'patch',
+      found: installations.length,
+      patched: successCount,
+      skipped: skipCount,
+      failed: failCount,
+      results: logResults
+    });
+  }
+  
+  process.exit(failCount > 0 ? 1 : 0);
 }
 
 main().catch(err => {

@@ -64,7 +64,7 @@ Add a shell wrapper that patches before each invocation:
 
 ```bash
 # Add to your .bashrc or .zshrc
-cl() { npx claude-depester --all --silent --log ; claude "$@" ; }
+cl() { npx claude-depester --silent --log ; claude "$@" ; }
 ```
 
 Then use `cl` instead of `claude`. This ensures patching happens *before* Claude loads.
@@ -86,12 +86,12 @@ Then use `cl` instead of `claude`. This ensures patching happens *before* Claude
 
 | Command | Description |
 |---------|-------------|
-| `npx claude-depester` | Patch Claude Code |
-| `npx claude-depester --all` | Patch ALL installations (CLI + VS Code) |
-| `npx claude-depester --list` | List all found installations |
+| `npx claude-depester` | Patch all Claude Code installations |
+| `npx claude-depester --list` | List all found installations and status |
 | `npx claude-depester --dry-run` | Preview changes (no modifications) |
 | `npx claude-depester --check` | Check patch status |
-| `npx claude-depester --restore` | Restore original from backup |
+| `npx claude-depester --restore` | Restore all from backup |
+| `npx claude-depester --path <file>` | Target a specific file |
 | `npx claude-depester --verbose` | Show detailed info |
 | `npx claude-depester --debug` | Show detailed debug info (for troubleshooting) |
 | `npx claude-depester --log` | Write results to `~/.claude/depester.log` |
@@ -131,9 +131,7 @@ Then use `cl` instead of `claude`. This ensures patching happens *before* Claude
 | VS Code extension | `%USERPROFILE%\.vscode\extensions\anthropic.claude-code-*\` | Fully supported |
 | VS Code webview | `...\extensions\...\webview\index.js` | Fully supported |
 
-The tool auto-detects your installation. Use `--list` to see all found installations, and `--all` to patch them all at once.
-
-> **Important for VS Code users:** The extension has TWO places with spinner words - the native binary AND the webview. Use `--all` to patch both!
+The tool auto-detects all your installations. Use `--list` to see them. All commands (patch, check, restore) operate on all installations by default. Use `--path <file>` to target a specific file.
 
 > **Remote Development (SSH):** When using VS Code Remote or Cursor over SSH, run the tool **on the remote server** to patch `~/.vscode-server` or `~/.cursor-server`.
 
@@ -165,7 +163,7 @@ The `--install-hook` command adds a SessionStart hook to `~/.claude/settings.jso
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-depester --all --silent --log"
+            "command": "npx claude-depester --silent --log"
           }
         ]
       }
@@ -213,7 +211,7 @@ The VS Code extension has **TWO separate components** with spinner words:
 You must patch BOTH for the fix to work. Use:
 ```bash
 npx claude-depester --list    # Should show both binary AND webview
-npx claude-depester --all     # Patch ALL components
+npx claude-depester           # Patches all components
 ```
 
 Then **fully restart VS Code** (not just reload window).
@@ -229,7 +227,7 @@ If the patch fails:
 ### Want to undo everything
 
 ```bash
-npx claude-depester --restore --all  # Restore all installations
+npx claude-depester --restore        # Restore all installations
 npx claude-depester --remove-hook    # Remove hook (if installed)
 # Remove the shell wrapper from your .bashrc/.zshrc if added
 ```
