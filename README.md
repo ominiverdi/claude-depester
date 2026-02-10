@@ -8,9 +8,9 @@ Patches Claude Code CLI and VS Code extension to replace whimsical loading words
 
 Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
-> **Last updated:** 2026-01-28 | **Tested with:** Claude Code 2.1.15 | **Platforms:** Linux, macOS, Windows
+> **Last updated:** 2026-02-10 | **Tested with:** Claude Code 2.1.4 - 2.1.38 | **Platforms:** Linux, macOS, Windows
 >
-> v1.3.6: Add support for VS Code Remote SSH and Cursor Remote SSH (`.vscode-server`, `.cursor-server`)
+> v1.4.0: Fixed MachO binary bloat on macOS with Claude Code 2.1.37+ ([#5](https://github.com/ominiverdi/claude-depester/issues/5)). Added support for new Bun data format. Uses raw file write instead of LIEF write() for MachO/PE repacking.
 
 **CLI - Spinner:**
 
@@ -246,7 +246,7 @@ npx claude-depester --remove-hook    # Remove hook (if installed)
    - Spinner words: `["Accomplishing",...,"Zigzagging"]` -> `["Thinking"]`
    - Completion verbs: `["Baked",...,"Worked"]` -> `["Thought"]`
 
-4. **Repacking**: Rebuilds the binary with the modified JavaScript
+4. **Repacking**: Rebuilds the binary with the modified JavaScript. Supports both old (pre-2.1.37) and new Bun data formats (different trailer signatures and module struct sizes)
 
 ### File locations
 
@@ -263,14 +263,14 @@ npx claude-depester --remove-hook    # Remove hook (if installed)
 
 | Platform | Binary Patching | Webview Patching | Status |
 |----------|-----------------|------------------|--------|
-| Linux x64 | ELF | Yes | Tested |
+| Linux x64 | ELF | Yes | Tested (2.1.27) |
 | Linux ARM64 | ELF | Yes | Should work |
 | macOS Intel | MachO | Yes | Should work |
-| macOS Apple Silicon | MachO | Yes | Should work |
+| macOS Apple Silicon | MachO | Yes | Tested (2.1.38) |
 | Windows x64 | PE | Yes | Should work |
 | Windows ARM64 | PE | Yes | Should work |
 
-The tool uses [node-lief](https://www.npmjs.com/package/node-lief) which has prebuilt binaries for all these platforms.
+Binary repacking uses raw file writes (byte-level section replacement) for MachO and PE formats, avoiding LIEF write() which could produce bloated output. ELF uses LIEF write(). The tool uses [node-lief](https://www.npmjs.com/package/node-lief) for binary parsing on all platforms.
 
 ## Contributing
 
