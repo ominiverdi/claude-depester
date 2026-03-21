@@ -368,23 +368,32 @@ async function main() {
     let failCount = 0;
     
     for (const inst of installations) {
-      const success = restoreBackup(inst.path);
       if (installations.length > 1) {
         log(`${inst.method}:`);
         log(`  ${inst.path}`);
       }
-      if (success) {
-        if (installations.length > 1) {
-          log('  -> Restored from backup\n');
+      try {
+        const success = restoreBackup(inst.path);
+        if (success) {
+          if (installations.length > 1) {
+            log('  -> Restored from backup\n');
+          } else {
+            log('Restored original file from backup.');
+          }
+          successCount++;
         } else {
-          log('Restored original file from backup.');
+          if (installations.length > 1) {
+            log('  -> No backup found\n');
+          } else {
+            error('No backup found. Cannot restore.');
+          }
+          failCount++;
         }
-        successCount++;
-      } else {
+      } catch (err) {
         if (installations.length > 1) {
-          log('  -> No backup found\n');
+          log(`  -> Failed: ${err.message}\n`);
         } else {
-          error('No backup found. Cannot restore.');
+          error(`Failed to restore: ${err.message}`);
         }
         failCount++;
       }
