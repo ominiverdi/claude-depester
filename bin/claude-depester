@@ -30,6 +30,7 @@ const flags = {
   debug: args.includes('--debug') || args.includes('-d'),
   log: args.includes('--log'),
   list: args.includes('--list') || args.includes('-l'),
+  noAnimation: args.includes('--no-animation'),
   // --all is accepted silently for backwards compatibility (all is now the default)
 };
 
@@ -58,6 +59,9 @@ function formatPatchDetails(result) {
   if (result.completionCount > 0) {
     parts.push(`completion(${result.completionCount})`);
   }
+  if (result.animationCount > 0) {
+    parts.push(`animation(${result.animationCount})`);
+  }
   return parts.length > 0 ? ` [${parts.join(' + ')}]` : '';
 }
 
@@ -77,12 +81,13 @@ OPTIONS:
   -c, --check       Check patch status of all installations
   -r, --restore     Restore all installations from backup
   -n, --dry-run     Preview changes without applying
+  --no-animation    Also disable the animated spinner icon (webview only)
   --path <file>     Target a specific file instead of auto-detecting
-  
+
   --install-hook    Add SessionStart hook (auto-patch after updates)
   --remove-hook     Remove SessionStart hook
   --hook-status     Check if hook is installed
-  
+
   -s, --silent      Suppress output (for hook use)
   --verbose         Show detailed information
   -d, --debug       Show detailed debug info (for troubleshooting)
@@ -201,10 +206,17 @@ async function main() {
           log(`  Marker words found: ${debug.markerWordsFound.length > 0 ? debug.markerWordsFound.join(', ') : 'none'}`);
           log(`  Completion verbs found: ${debug.completionVerbsFound.length > 0 ? debug.completionVerbsFound.join(', ') : 'none'}`);
           log('');
+          if (debug.isWebview) {
+            log(`  Has spinner icon animation: ${debug.hasSpinnerIconAnimation}`);
+          }
+          log('');
           log('Computed status:');
           log(`  Spinner patched: ${debug.spinnerPatched}`);
           log(`  Completion patched: ${debug.completionPatched}`);
           log(`  Has silly words: ${debug.hasSillyWords}`);
+          if (debug.isWebview) {
+            log(`  Animation patched: ${debug.animationPatched}`);
+          }
         }
         if (debug.error) {
           log(`Error: ${debug.error}`);
@@ -326,6 +338,11 @@ async function main() {
         const statusStr = status.patched ? 'PATCHED' : 'NOT PATCHED';
         log(`[${statusStr}] ${inst.method}`);
         log(`  ${inst.path}`);
+        if (status.isWebview && status.hasSpinnerIconAnimation) {
+          log('  Animation: not patched (use --no-animation to disable)');
+        } else if (status.isWebview && !status.hasSpinnerIconAnimation) {
+          log('  Animation: patched');
+        }
         if (status.hasBackup) log('  Backup: available');
         log('');
       } else {
@@ -338,6 +355,13 @@ async function main() {
         } else {
           log('Status: UNKNOWN');
           log('Could not find silly words array. Version may not be supported.');
+        }
+        if (status.isWebview) {
+          if (status.hasSpinnerIconAnimation) {
+            log('Animation: not patched (use --no-animation to disable)');
+          } else {
+            log('Animation: patched');
+          }
         }
         if (status.hasBackup) {
           log('Backup: available (can restore with --restore)');
@@ -417,8 +441,14 @@ async function main() {
     }
     
     const debugBefore = flags.log ? getDebugInfo(inst.path, { type: inst.type }) : null;
-    
-    const result = patch(inst.path, { dryRun: flags.dryRun, type: inst.type });
+
+    if (flags.noAnimation && inst.type !== 'webview') {
+      if (installations.length > 1 || flags.verbose) {
+        log('  (--no-animation only applies to webview files, skipping for this installation)');
+      }
+    }
+
+    const result = patch(inst.path, { dryRun: flags.dryRun, type: inst.type, noAnimation: flags.noAnimation });
     if (result.success) {
       if (result.alreadyPatched) {
         if (installations.length > 1 || flags.verbose) {
