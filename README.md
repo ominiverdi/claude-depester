@@ -8,9 +8,9 @@ Patches Claude Code CLI and VS Code extension to replace whimsical loading words
 
 Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
-> **Last updated:** 2026-02-10 | **Tested with:** Claude Code 2.1.4 - 2.1.38 | **Platforms:** Linux, macOS, Windows
+> **Last updated:** 2026-03-22 | **Tested with:** Claude Code 2.1.4 - 2.1.81 | **Platforms:** Linux, macOS, Windows
 >
-> v1.4.0: Fixed MachO binary bloat on macOS with Claude Code 2.1.37+ ([#5](https://github.com/ominiverdi/claude-depester/issues/5)). Added support for new Bun data format. Uses raw file write instead of LIEF write() for MachO/PE repacking.
+> v1.5.0: New `--no-animation` flag disables the animated spinner icon in both CLI and VS Code. New `--no-tips` flag hides spinner tips. Fix for `--restore` crashing on locked files. Thanks [@noobydp](https://github.com/noobydp)!
 
 **CLI - Spinner:**
 
@@ -73,6 +73,8 @@ Then use `cl` instead of `claude`. This ensures patching happens *before* Claude
 
 - **Patches spinner words** ("Flibbertigibbeting..." -> "Thinking...")
 - **Patches completion verbs** ("Baked for 42s" -> "Thought for 42s")
+- **Disables spinner animation** (`--no-animation`) - replaces cycling icon with a static dot
+- **Disables spinner tips** (`--no-tips`) - hides "Tip: ..." messages shown during thinking
 - Works with native binaries (Bun-compiled) and npm installations
 - **Patches VS Code/VSCodium extension webview** (the UI that shows spinner text)
 - **Supports remote development** (VS Code Remote SSH, Cursor SSH)
@@ -91,6 +93,8 @@ Then use `cl` instead of `claude`. This ensures patching happens *before* Claude
 | `npx claude-depester --dry-run` | Preview changes (no modifications) |
 | `npx claude-depester --check` | Check patch status |
 | `npx claude-depester --restore` | Restore all from backup |
+| `npx claude-depester --no-animation` | Disable animated spinner icon |
+| `npx claude-depester --no-tips` | Disable spinner tips |
 | `npx claude-depester --path <file>` | Target a specific file |
 | `npx claude-depester --verbose` | Show detailed info |
 | `npx claude-depester --debug` | Show detailed debug info (for troubleshooting) |
@@ -240,9 +244,11 @@ npx claude-depester --remove-hook    # Remove hook (if installed)
 
 2. **Extraction**: For native binaries (Bun-compiled), uses [node-lief](https://www.npmjs.com/package/node-lief) to properly extract the embedded JavaScript - the same approach used by [tweakcc](https://github.com/Piebald-AI/tweakcc)
 
-3. **Patching**: Replaces two arrays:
+3. **Patching**: Replaces arrays and settings:
    - Spinner words: `["Accomplishing",...,"Zigzagging"]` -> `["Thinking"]`
    - Completion verbs: `["Baked",...,"Worked"]` -> `["Thought"]`
+   - Spinner icon animation (`--no-animation`): `["·","✢","*","✶","✻","✽"]` -> `["·"]`
+   - Spinner tips (`--no-tips`): sets `spinnerTipsEnabled: false` in Claude settings
 
 4. **Repacking**: Rebuilds the binary with the modified JavaScript. Supports both old (pre-2.1.37) and new Bun data formats (different trailer signatures and module struct sizes)
 

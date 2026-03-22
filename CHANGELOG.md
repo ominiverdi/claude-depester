@@ -2,6 +2,21 @@
 
 All notable changes to claude-depester will be documented in this file.
 
+## [1.5.0] - 2026-03-22
+
+**Tested with:** Claude Code 2.1.4 - 2.1.81
+
+### Added
+- **`--no-animation` flag**: Disables the animated spinner icon (cycling `·✢*✶✻✽` characters), replacing it with a static `·`. Works on both CLI binaries and VS Code webview
+- **`--no-tips` flag**: Disables spinner tips ("Tip: ...") by setting `spinnerTipsEnabled: false` in Claude settings. No binary patching needed
+- Animation status now shown in `--check` and `--debug` output for all installation types
+
+### Fixed
+- **`--restore` crash on locked files** ([PR #8](https://github.com/ominiverdi/claude-depester/pull/8)): Locked files (e.g. while VS Code is running) no longer prevent restoring remaining installations
+
+### Thanks
+- [@noobydp](https://github.com/noobydp) for the `--no-animation` webview implementation and the `--restore` crash fix
+
 ## [1.4.0] - 2026-02-10
 
 **Tested with:** Claude Code 2.1.4 - 2.1.38

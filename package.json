@@ -1,6 +1,6 @@
 {
   "name": "claude-depester",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Patches Claude Code CLI and VS Code extension to show 'Thinking' instead of whimsical words.",
   "main": "lib/patcher.js",
   "bin": {

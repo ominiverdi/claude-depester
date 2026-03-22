@@ -31,6 +31,7 @@ const flags = {
   log: args.includes('--log'),
   list: args.includes('--list') || args.includes('-l'),
   noAnimation: args.includes('--no-animation'),
+  noTips: args.includes('--no-tips'),
   // --all is accepted silently for backwards compatibility (all is now the default)
 };
 
@@ -81,7 +82,8 @@ OPTIONS:
   -c, --check       Check patch status of all installations
   -r, --restore     Restore all installations from backup
   -n, --dry-run     Preview changes without applying
-  --no-animation    Also disable the animated spinner icon (webview only)
+  --no-animation    Disable the animated spinner icon
+  --no-tips         Disable spinner tips (sets spinnerTipsEnabled in Claude settings)
   --path <file>     Target a specific file instead of auto-detecting
 
   --install-hook    Add SessionStart hook (auto-patch after updates)
@@ -171,6 +173,33 @@ async function main() {
     process.exit(result.success ? 0 : 1);
   }
   
+  // Handle --no-tips (modifies Claude settings.json)
+  if (flags.noTips) {
+    const fs = require('fs');
+    const path = require('path');
+    const settingsPath = path.join(process.env.HOME || process.env.USERPROFILE || '', '.claude', 'settings.json');
+    try {
+      let settings = {};
+      if (fs.existsSync(settingsPath)) {
+        settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+      }
+      if (settings.spinnerTipsEnabled === false) {
+        log('Spinner tips already disabled in Claude settings.');
+      } else {
+        settings.spinnerTipsEnabled = false;
+        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
+        log('Disabled spinner tips in Claude settings.');
+        log(`  ${settingsPath}`);
+      }
+    } catch (err) {
+      error(`Failed to update Claude settings: ${err.message}`);
+    }
+    // If --no-tips is the only action, exit
+    if (!flags.check && !flags.restore && !flags.dryRun && !flags.debug && !flags.list && !pathOverride && !flags.noAnimation) {
+      process.exit(0);
+    }
+  }
+  
   // Handle --debug (shows info for all installations)
   if (flags.debug) {
     log('=== DEPESTER DEBUG INFO ===\n');
@@ -206,17 +235,13 @@ async function main() {
           log(`  Marker words found: ${debug.markerWordsFound.length > 0 ? debug.markerWordsFound.join(', ') : 'none'}`);
           log(`  Completion verbs found: ${debug.completionVerbsFound.length > 0 ? debug.completionVerbsFound.join(', ') : 'none'}`);
           log('');
-          if (debug.isWebview) {
-            log(`  Has spinner icon animation: ${debug.hasSpinnerIconAnimation}`);
-          }
+          log(`  Has spinner icon animation: ${debug.hasSpinnerIconAnimation}`);
           log('');
           log('Computed status:');
           log(`  Spinner patched: ${debug.spinnerPatched}`);
           log(`  Completion patched: ${debug.completionPatched}`);
           log(`  Has silly words: ${debug.hasSillyWords}`);
-          if (debug.isWebview) {
-            log(`  Animation patched: ${debug.animationPatched}`);
-          }
+          log(`  Animation patched: ${debug.animationPatched}`);
         }
         if (debug.error) {
           log(`Error: ${debug.error}`);
@@ -338,9 +363,9 @@ async function main() {
         const statusStr = status.patched ? 'PATCHED' : 'NOT PATCHED';
         log(`[${statusStr}] ${inst.method}`);
         log(`  ${inst.path}`);
-        if (status.isWebview && status.hasSpinnerIconAnimation) {
+        if (status.hasSpinnerIconAnimation) {
           log('  Animation: not patched (use --no-animation to disable)');
-        } else if (status.isWebview && !status.hasSpinnerIconAnimation) {
+        } else {
           log('  Animation: patched');
         }
         if (status.hasBackup) log('  Backup: available');
@@ -356,12 +381,10 @@ async function main() {
           log('Status: UNKNOWN');
           log('Could not find silly words array. Version may not be supported.');
         }
-        if (status.isWebview) {
-          if (status.hasSpinnerIconAnimation) {
-            log('Animation: not patched (use --no-animation to disable)');
-          } else {
-            log('Animation: patched');
-          }
+        if (status.hasSpinnerIconAnimation) {
+          log('Animation: not patched (use --no-animation to disable)');
+        } else {
+          log('Animation: patched');
         }
         if (status.hasBackup) {
           log('Backup: available (can restore with --restore)');
@@ -441,12 +464,6 @@ async function main() {
     }
     
     const debugBefore = flags.log ? getDebugInfo(inst.path, { type: inst.type }) : null;
-
-    if (flags.noAnimation && inst.type !== 'webview') {
-      if (installations.length > 1 || flags.verbose) {
-        log('  (--no-animation only applies to webview files, skipping for this installation)');
-      }
-    }
 
     const result = patch(inst.path, { dryRun: flags.dryRun, type: inst.type, noAnimation: flags.noAnimation });
     if (result.success) {
