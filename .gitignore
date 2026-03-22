@@ -138,5 +138,9 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
+# Local documentation (private notes, not published)
+localdocs/
+AGENTS.md
+
 # macOS
 .DS_Store
