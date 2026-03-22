@@ -7,7 +7,7 @@
     "claude-depester": "./bin/claude-depester"
   },
   "scripts": {
-    "test": "node bin/claude-depester --check"
+    "test": "node --test test/*.test.js"
   },
   "keywords": [
     "claude-code",
