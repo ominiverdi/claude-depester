@@ -2,6 +2,17 @@
 
 All notable changes to claude-depester will be documented in this file.
 
+## [1.5.1] - 2026-03-27
+
+**Tested with:** Claude Code 2.1.4 - 2.1.85
+
+### Fixed
+- **ELF binary extraction for Bun 1.2+**: Newer Claude Code versions (2.1.84+) embed Bun data in a `.bun` ELF section instead of an overlay. Both formats are now supported
+- **ELF section repacking**: Uses raw file write (like MachO/PE) for section-based ELF binaries
+
+### Changed
+- **Default hook command includes `--no-animation`**: `--install-hook` now also disables spinner animation automatically
+
 ## [1.5.0] - 2026-03-22
 
 **Tested with:** Claude Code 2.1.4 - 2.1.81

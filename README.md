@@ -8,9 +8,9 @@ Patches Claude Code CLI and VS Code extension to replace whimsical loading words
 
 Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
-> **Last updated:** 2026-03-22 | **Tested with:** Claude Code 2.1.4 - 2.1.81 | **Platforms:** Linux, macOS, Windows
+> **Last updated:** 2026-03-27 | **Tested with:** Claude Code 2.1.4 - 2.1.85 | **Platforms:** Linux, macOS, Windows
 >
-> v1.5.0: New `--no-animation` flag disables the animated spinner icon in both CLI and VS Code. New `--no-tips` flag hides spinner tips. Fix for `--restore` crashing on locked files. Thanks [@noobydp](https://github.com/noobydp)!
+> v1.5.1: Fix binary extraction for newer Claude Code versions (2.1.84+) that use a new Bun ELF section format. Auto-patch hook now includes `--no-animation` by default.
 
 **CLI - Spinner:**
 
@@ -167,7 +167,7 @@ The `--install-hook` command adds a SessionStart hook to `~/.claude/settings.jso
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-depester --silent --log"
+            "command": "npx claude-depester --silent --log --no-animation"
           }
         ]
       }
@@ -267,14 +267,14 @@ npx claude-depester --remove-hook    # Remove hook (if installed)
 
 | Platform | Binary Patching | Webview Patching | Status |
 |----------|-----------------|------------------|--------|
-| Linux x64 | ELF | Yes | Tested (2.1.27) |
+| Linux x64 | ELF | Yes | Tested (2.1.85) |
 | Linux ARM64 | ELF | Yes | Should work |
 | macOS Intel | MachO | Yes | Should work |
 | macOS Apple Silicon | MachO | Yes | Tested (2.1.38) |
 | Windows x64 | PE | Yes | Should work |
 | Windows ARM64 | PE | Yes | Should work |
 
-Binary repacking uses raw file writes (byte-level section replacement) for MachO and PE formats, avoiding LIEF write() which could produce bloated output. ELF uses LIEF write(). The tool uses [node-lief](https://www.npmjs.com/package/node-lief) for binary parsing on all platforms.
+Binary repacking uses raw file writes (byte-level section replacement) for MachO, PE, and newer ELF formats (Bun 1.2+ with `.bun` section), avoiding LIEF write() which could produce bloated output. Older ELF binaries (overlay format) use LIEF write(). The tool uses [node-lief](https://www.npmjs.com/package/node-lief) for binary parsing on all platforms.
 
 ## Contributing
 
