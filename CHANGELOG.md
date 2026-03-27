@@ -2,7 +2,7 @@
 
 All notable changes to claude-depester will be documented in this file.
 
-## [1.5.1] - 2026-03-27
+## [1.5.2] - 2026-03-27
 
 **Tested with:** Claude Code 2.1.4 - 2.1.85
 

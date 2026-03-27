@@ -10,7 +10,7 @@ Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., yo
 
 > **Last updated:** 2026-03-27 | **Tested with:** Claude Code 2.1.4 - 2.1.85 | **Platforms:** Linux, macOS, Windows
 >
-> v1.5.1: Fix binary extraction for newer Claude Code versions (2.1.84+) that use a new Bun ELF section format. Auto-patch hook now includes `--no-animation` by default.
+> v1.5.2: Fix binary extraction for newer Claude Code versions (2.1.84+) that use a new Bun ELF section format. Auto-patch hook now includes `--no-animation` by default.
 
 **CLI - Spinner:**
 
@@ -64,7 +64,7 @@ Add a shell wrapper that patches before each invocation:
 
 ```bash
 # Add to your .bashrc or .zshrc
-cl() { npx claude-depester --silent --log ; claude "$@" ; }
+cl() { npx claude-depester --silent --log --no-animation ; claude "$@" ; }
 ```
 
 Then use `cl` instead of `claude`. This ensures patching happens *before* Claude loads.
