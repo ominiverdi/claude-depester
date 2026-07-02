@@ -2,6 +2,23 @@
 
 All notable changes to claude-depester will be documented in this file.
 
+## [1.6.0] - 2026-07-01
+
+**Tested with:** Claude Code 2.1.4 - 2.1.198
+
+### Added
+- **VS Code auto-patch hook (`--install-vscode-hook`)**: VS Code auto-updates the Claude Code extension (often daily), installing a fresh unpatched copy that new windows load — silently reverting the patch. This flag sideloads a tiny companion extension (`ominiverdi.claude-depester-hook`, bundled as a VSIX, never from the marketplace) that re-runs the patcher on window startup and watches the extensions directory to patch new Claude Code versions the moment the background update installs them
+- **`--remove-vscode-hook` flag**: Uninstalls the companion extension from all detected editors (VS Code, VS Code Insiders, VSCodium, Cursor)
+- VS Code hook status shown in `--check`, `--hook-status`, and `--debug` output
+- Tip after patching VS Code extension files when the VS Code hook is not installed
+- Companion extension logs to the "Claude Depester" output channel and `~/.claude/depester.log`
+- **Cross-process lock** (`~/.claude/depester.lock`): concurrent patch/restore runs now serialize instead of interleaving writes. With auto-patch hooks, concurrent runs are routine (every open window activates the companion extension) - two patchers racing on the same binary corrupted it during testing. Losers skip; the winner covers all installations. Stale locks from crashed runs are stolen automatically
+- **Post-patch binary verification with auto-rollback**: after repacking a binary, the patcher runs it with `--version`; if it fails to parse (unsupported Bun format, interrupted write), the original is restored from backup immediately. A patch run can no longer leave behind a broken Claude Code binary
+
+### Changed
+- **Hook commands pin `@latest`**: The SessionStart hook and the companion extension invoke `npx -y claude-depester@latest` so npx re-resolves the dist-tag each run and published fixes flow through automatically (a bare package name reuses a stale npx cache indefinitely). Re-run `--install-hook` to upgrade an existing hook in place
+- `--restore` now reminds you to run `--remove-vscode-hook` if the VS Code hook is installed (it would otherwise re-patch on the next window)
+
 ## [1.5.2] - 2026-03-27
 
 **Tested with:** Claude Code 2.1.4 - 2.1.85

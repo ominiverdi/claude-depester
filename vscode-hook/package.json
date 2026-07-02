@@ -1,0 +1,33 @@
+{
+  "name": "claude-depester-hook",
+  "displayName": "Claude Depester Auto-Patch Hook",
+  "description": "Re-applies the claude-depester patch whenever VS Code auto-updates the Claude Code extension.",
+  "version": "1.0.0",
+  "publisher": "ominiverdi",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ominiverdi/claude-depester.git"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "extensionKind": [
+    "ui",
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "Runs no workspace code; only patches Claude Code extension files under the user's extensions directory."
+    },
+    "virtualWorkspaces": true
+  }
+}

@@ -11,6 +11,8 @@
 const { findAllClaudeCode, getSearchedPaths } = require('../lib/detector');
 const { patch, checkStatus, getDebugInfo, restoreBackup } = require('../lib/patcher');
 const { installHook, removeHook, getHookStatus, searchHookLogs, appendLog, readLog, LOG_PATH } = require('../lib/hooks');
+const { installVsCodeHook, removeVsCodeHook, getVsCodeHookStatus } = require('../lib/vscode-hook');
+const { acquireLock, releaseLock, LOCK_PATH } = require('../lib/lock');
 
 const VERSION = require('../package.json').version;
 
@@ -24,6 +26,8 @@ const flags = {
   dryRun: args.includes('--dry-run') || args.includes('-n'),
   installHook: args.includes('--install-hook'),
   removeHook: args.includes('--remove-hook'),
+  installVscodeHook: args.includes('--install-vscode-hook'),
+  removeVscodeHook: args.includes('--remove-vscode-hook'),
   hookStatus: args.includes('--hook-status'),
   silent: args.includes('--silent') || args.includes('-s'),
   verbose: args.includes('--verbose'),
@@ -88,7 +92,10 @@ OPTIONS:
 
   --install-hook    Add SessionStart hook (auto-patch after updates)
   --remove-hook     Remove SessionStart hook
-  --hook-status     Check if hook is installed
+  --install-vscode-hook  Install VS Code extension that auto-patches when
+                         the Claude Code extension updates (recommended)
+  --remove-vscode-hook   Remove the VS Code auto-patch extension
+  --hook-status     Check if hooks are installed
 
   -s, --silent      Suppress output (for hook use)
   --verbose         Show detailed information
@@ -103,6 +110,7 @@ EXAMPLES:
   npx claude-depester --check         # Check status
   npx claude-depester --restore       # Undo all patches
   npx claude-depester --install-hook  # Auto-patch after updates
+  npx claude-depester --install-vscode-hook  # Auto-patch VS Code extension updates
   npx claude-depester --dry-run       # Preview without patching
   npx claude-depester --path ./claude # Patch a specific file
   npx claude-depester --debug         # Troubleshoot issues
@@ -156,19 +164,42 @@ async function main() {
   // Handle hook management (doesn't require finding cli.js)
   if (flags.hookStatus) {
     const status = getHookStatus();
-    log(`Hook installed: ${status.installed ? 'yes' : 'no'}`);
+    log(`SessionStart hook installed: ${status.installed ? 'yes' : 'no'}`);
     log(`Settings file: ${status.settingsPath}`);
+    const vscodeStatus = getVsCodeHookStatus();
+    if (vscodeStatus.installed) {
+      for (const inst of vscodeStatus.installations) {
+        const outdatedStr = vscodeStatus.bundledVersion &&
+          inst.version !== vscodeStatus.bundledVersion &&
+          vscodeStatus.outdated ? ` (bundled: v${vscodeStatus.bundledVersion} - run --install-vscode-hook to update)` : '';
+        log(`VS Code auto-patch hook: installed in ${inst.editor} (v${inst.version})${outdatedStr}`);
+      }
+    } else {
+      log('VS Code auto-patch hook: not installed');
+    }
     process.exit(0);
   }
-  
+
   if (flags.installHook) {
     const result = installHook();
     log(result.message);
     process.exit(result.success ? 0 : 1);
   }
-  
+
   if (flags.removeHook) {
     const result = removeHook();
+    log(result.message);
+    process.exit(result.success ? 0 : 1);
+  }
+
+  if (flags.installVscodeHook) {
+    const result = installVsCodeHook();
+    log(result.message);
+    process.exit(result.success ? 0 : 1);
+  }
+
+  if (flags.removeVscodeHook) {
+    const result = removeVsCodeHook();
     log(result.message);
     process.exit(result.success ? 0 : 1);
   }
@@ -255,6 +286,12 @@ async function main() {
     log('--- Hook Status ---');
     log(`Hook installed: ${hookStatus.installed}`);
     log(`Settings file: ${hookStatus.settingsPath}`);
+    const vscodeHookDebug = getVsCodeHookStatus();
+    log(`VS Code hook installed: ${vscodeHookDebug.installed}`);
+    for (const inst of vscodeHookDebug.installations) {
+      log(`  ${inst.editor}: v${inst.version} (${inst.dir})`);
+    }
+    log(`VS Code hook bundled version: ${vscodeHookDebug.bundledVersion || 'unknown'}`);
     log('');
     
     // Search Claude debug logs for hook activity
@@ -396,10 +433,27 @@ async function main() {
     
     const hookStatus = getHookStatus();
     log(`Auto-patch hook: ${hookStatus.installed ? 'installed' : 'not installed'}`);
-    
+    const vscodeHookStatus = getVsCodeHookStatus();
+    log(`VS Code auto-patch hook: ${vscodeHookStatus.installed ? 'installed' : 'not installed'}`);
+
     process.exit(allPatched && !anyError ? 0 : 1);
   }
   
+  // Restore and patch both write files - serialize concurrent runs (multiple
+  // VS Code windows, SessionStart hook, manual). Interleaved binary writes
+  // corrupt the binary; the winner covers all installations anyway.
+  if (!flags.dryRun && !acquireLock()) {
+    log('Another claude-depester run is already in progress. Skipping.');
+    log(`(If no other run is active, delete the stale lock: ${LOCK_PATH})`);
+    if (flags.log) {
+      appendLog('Skipped: another run holds the lock', {
+        action: flags.restore ? 'restore' : 'patch'
+      });
+    }
+    process.exit(0);
+  }
+  process.on('exit', releaseLock);
+
   // Handle --restore
   if (flags.restore) {
     if (installations.length > 1) {
@@ -443,6 +497,10 @@ async function main() {
     
     if (successCount > 0) {
       log('Restart Claude Code for changes to take effect.');
+      if (getVsCodeHookStatus().installed) {
+        log('\nNote: The VS Code auto-patch hook is still installed and will re-patch');
+        log('on the next window. Run --remove-vscode-hook to stop auto-patching.');
+      }
     }
     process.exit(failCount > 0 && successCount === 0 ? 1 : 0);
   }
@@ -524,6 +582,12 @@ async function main() {
     const hookStatus = getHookStatus();
     if (!hookStatus.installed) {
       log('\nTip: Run with --install-hook to auto-patch after updates.');
+    }
+
+    const patchedVsCode = installations.some(inst => inst.method.startsWith('VS Code extension'));
+    if (patchedVsCode && !getVsCodeHookStatus().installed) {
+      log('\nTip: VS Code auto-updates the Claude Code extension (often daily), which');
+      log('reverts this patch. Run --install-vscode-hook to re-patch automatically.');
     }
   } else if (skipCount > 0 && successCount === 0 && failCount === 0) {
     log('Already patched. Nothing to do.');

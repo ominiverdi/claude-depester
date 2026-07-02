@@ -1,13 +1,15 @@
 {
   "name": "claude-depester",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "description": "Patches Claude Code CLI and VS Code extension to show 'Thinking' instead of whimsical words.",
   "main": "lib/patcher.js",
   "bin": {
     "claude-depester": "./bin/claude-depester"
   },
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "build:vsix": "cd vscode-hook && vsce package --no-dependencies -o ../dist/claude-depester-hook.vsix",
+    "prepublishOnly": "npm test && npm run build:vsix"
   },
   "keywords": [
     "claude-code",
@@ -36,10 +38,15 @@
   "files": [
     "bin/",
     "lib/",
+    "dist/",
+    "vscode-hook/",
     "README.md",
     "LICENSE"
   ],
   "dependencies": {
     "node-lief": "^1.0.0"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.9.2"
   }
 }

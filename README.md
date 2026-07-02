@@ -8,9 +8,9 @@ Patches Claude Code CLI and VS Code extension to replace whimsical loading words
 
 Instead of seeing "Flibbertigibbeting", "Discombobulating", "Clauding", etc., you'll see a clean "Thinking".
 
-> **Last updated:** 2026-03-27 | **Tested with:** Claude Code 2.1.4 - 2.1.85 | **Platforms:** Linux, macOS, Windows
+> **Last updated:** 2026-07-01 | **Tested with:** Claude Code 2.1.4 - 2.1.198 | **Platforms:** Linux, macOS, Windows
 >
-> v1.5.2: Fix binary extraction for newer Claude Code versions (2.1.84+) that use a new Bun ELF section format. Auto-patch hook now includes `--no-animation` by default.
+> v1.6.0: New `--install-vscode-hook` installs a tiny companion VS Code extension that re-patches automatically when VS Code auto-updates the Claude Code extension (which used to silently revert the patch).
 
 **CLI - Spinner:**
 
@@ -54,9 +54,36 @@ npx claude-depester --dry-run
 
 # Patch Claude Code
 npx claude-depester
+
+# VS Code users: keep it patched across extension auto-updates
+npx claude-depester --install-vscode-hook
 ```
 
-Restart Claude Code for changes to take effect.
+Restart Claude Code (and VS Code) for changes to take effect.
+
+### Auto-patch VS Code extension updates (recommended for VS Code users)
+
+VS Code auto-updates the Claude Code extension in the background — often daily.
+Each update installs a fresh, unpatched copy that new windows load, silently
+reverting the patch. `--install-vscode-hook` fixes this permanently:
+
+```bash
+npx claude-depester --install-vscode-hook
+```
+
+This sideloads a ~5 KB companion extension (`ominiverdi.claude-depester-hook`)
+into every editor it finds (VS Code, VS Code Insiders, VSCodium, Cursor). The
+companion extension:
+
+- **Re-patches on window startup** if any Claude Code extension is unpatched
+- **Watches the extensions directory** and patches new Claude Code versions the
+  moment the background auto-update installs them — before you open a new window
+
+It is installed via the editor's own CLI (never the marketplace), so it is never
+auto-updated or overwritten. All patch logic stays in this npm package, invoked
+as `npx -y claude-depester@latest`, so patcher updates apply without reinstalling
+the companion. Activity is logged to the "Claude Depester" output channel and
+`~/.claude/depester.log`. Remove it anytime with `--remove-vscode-hook`.
 
 ### Auto-patch after updates (recommended)
 
@@ -77,6 +104,7 @@ Then use `cl` instead of `claude`. This ensures patching happens *before* Claude
 - **Disables spinner tips** (`--no-tips`) - hides "Tip: ..." messages shown during thinking
 - Works with native binaries (Bun-compiled) and npm installations
 - **Patches VS Code/VSCodium extension webview** (the UI that shows spinner text)
+- **Auto-patches VS Code extension updates** (`--install-vscode-hook`) - companion extension re-patches when VS Code auto-updates Claude Code
 - **Supports remote development** (VS Code Remote SSH, Cursor SSH)
 - Auto-detects your Claude Code installation
 - Creates backup before patching (can restore anytime)
@@ -101,6 +129,8 @@ Then use `cl` instead of `claude`. This ensures patching happens *before* Claude
 | `npx claude-depester --log` | Write results to `~/.claude/depester.log` |
 | `npx claude-depester --install-hook` | Auto-patch after updates |
 | `npx claude-depester --remove-hook` | Remove auto-patch hook |
+| `npx claude-depester --install-vscode-hook` | Auto-patch VS Code extension updates |
+| `npx claude-depester --remove-vscode-hook` | Remove VS Code auto-patch extension |
 | `npx claude-depester --hook-status` | Check hook status |
 | `npx claude-depester --help` | Show help |
 
@@ -141,7 +171,9 @@ The tool auto-detects all your installations. Use `--list` to see them. All comm
 
 ## After Claude Code Updates
 
-If you're using the shell wrapper (recommended), patching happens automatically before each session.
+If you're using the shell wrapper (recommended for the CLI), patching happens automatically before each session.
+
+For the VS Code extension, `--install-vscode-hook` handles updates automatically.
 
 Otherwise, just run `npx claude-depester` again after updating.
 
@@ -167,7 +199,7 @@ The `--install-hook` command adds a SessionStart hook to `~/.claude/settings.jso
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-depester --silent --log --no-animation"
+            "command": "npx -y claude-depester@latest --silent --log --no-animation"
           }
         ]
       }
@@ -220,6 +252,19 @@ npx claude-depester           # Patches all components
 
 Then **fully restart VS Code** (not just reload window).
 
+### Patch works, then silly words return in new windows
+
+VS Code auto-updates the Claude Code extension in the background (often daily).
+The update lands in a new, unpatched directory: your already-open window keeps
+running the old patched version, but any **new window** loads the fresh
+unpatched one. Fix it permanently:
+
+```bash
+npx claude-depester --install-vscode-hook
+```
+
+See [Auto-patch VS Code extension updates](#auto-patch-vs-code-extension-updates-recommended-for-vs-code-users).
+
 ### Patch not working after update
 
 The detection uses content-based matching, so it should survive version updates.
@@ -231,8 +276,9 @@ If the patch fails:
 ### Want to undo everything
 
 ```bash
-npx claude-depester --restore        # Restore all installations
-npx claude-depester --remove-hook    # Remove hook (if installed)
+npx claude-depester --restore             # Restore all installations
+npx claude-depester --remove-hook         # Remove hook (if installed)
+npx claude-depester --remove-vscode-hook  # Remove VS Code hook (if installed)
 # Remove the shell wrapper from your .bashrc/.zshrc if added
 ```
 
@@ -252,11 +298,27 @@ npx claude-depester --remove-hook    # Remove hook (if installed)
 
 4. **Repacking**: Rebuilds the binary with the modified JavaScript. Supports both old (pre-2.1.37) and new Bun data formats (different trailer signatures and module struct sizes)
 
+5. **Verification**: After repacking, the binary is executed with `--version`; if it fails to parse, the original is automatically restored from backup. Patch/restore runs also take a cross-process lock (`~/.claude/depester.lock`) so concurrent runs (multiple editor windows with the auto-patch hook, SessionStart hook, manual) can't interleave writes and corrupt a binary
+
+### VS Code auto-patch hook
+
+The `--install-vscode-hook` command sideloads a minimal companion extension
+(source in [vscode-hook/](vscode-hook/), bundled as a VSIX) via
+`code --install-extension`. On window startup it checks each installed
+`anthropic.claude-code-*` extension's webview for marker words and runs the
+patcher if any are unpatched; while the window is open it watches the
+extensions directory so background auto-updates get patched immediately. The
+patch command is hardcoded (not read from settings) so workspaces cannot
+inject shell commands, and it pins `claude-depester@latest` so npx re-resolves
+new releases instead of reusing a stale cache.
+
 ### File locations
 
 - **Backup**: `<original-file>.depester.backup`
 - **Hook config**: `~/.claude/settings.json`
 - **Debug log**: `~/.claude/depester.log` (when using `--log`)
+- **VS Code hook**: `<extensions-dir>/ominiverdi.claude-depester-hook-<version>/`
+- **Lock file**: `~/.claude/depester.lock` (during patch/restore; auto-removed)
 
 ## Requirements
 
