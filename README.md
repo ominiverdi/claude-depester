@@ -1,3 +1,15 @@
+# Archived / Unmaintained
+
+This project is archived and no longer maintained.
+
+I no longer use Claude Code, and this tool patches third-party Claude Code binaries/extensions, which is fragile and requires active testing against upstream releases. No new Claude Code versions are supported, and no new features or fixes are planned.
+
+Use any existing releases at your own risk.
+
+See [MAINTENANCE.md](MAINTENANCE.md) and [SECURITY.md](SECURITY.md) for details.
+
+---
+
 # claude-depester
 
 [![npm version](https://img.shields.io/npm/v/claude-depester.svg)](https://www.npmjs.com/package/claude-depester)
